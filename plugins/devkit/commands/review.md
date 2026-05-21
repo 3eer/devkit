@@ -143,29 +143,33 @@ rg --files <TARGET> \
 ### 3. リスクレベルに応じてエージェントを並列起動する
 
 **低リスク (0–20):**
-- `code-reviewer` を起動 — 観点1-5（正確性）・19-24（信頼性・テスト）・21（要件充足）・40（リグレッション）を確認
+- `quality-reviewer` と `requirements-checker` を**同時に**起動（並列）
+  - quality-reviewer: 観点1-5（正確性）・19-24（信頼性・テスト）・40（リグレッション）
+  - requirements-checker: 観点21（要件充足・仕様書照合）
 - ただし以下に該当する場合は、該当エージェントを追加する:
   - 型/API contract/domain model 変更 → `type-checker`
   - セキュリティ/認証/依存関係変更 → `security-auditor`
   - UIコンポーネント/ページ/フォーム変更 → `ux-reviewer`
 
 **中リスク (21–50):**
-- `code-reviewer` と `security-auditor` を**同時に**起動（並列）
-  - code-reviewer: 観点1-5・19-24・21・40
-  - security-auditor: 観点6-10（OWASP・セキュリティ）
+- 以下のエージェントを**同時に**起動（並列）
+  - `quality-reviewer`: 観点1-5・19-24・40
+  - `requirements-checker`: 観点21（要件充足・仕様書照合）
+  - `security-auditor`: 観点6-10（OWASP・セキュリティ）
 - 型/API contract/domain model 変更がある場合は `type-checker` も追加する
 - UIコンポーネント/ページ/フォーム変更がある場合は `ux-reviewer` も追加する
 
 **高リスク (51+):**
 - 以下のエージェントを**同時に**起動（並列）
-  - `code-reviewer`: 観点1-5・19-24・21（要件充足）・40（リグレッション）
+  - `quality-reviewer`: 観点1-5・19-24・40（リグレッション）
+  - `requirements-checker`: 観点21（要件充足・仕様書照合）
   - `security-auditor`: 観点6-10（セキュリティ Red Team）
   - `type-checker`: 観点28-32（型安全性・I/F設計）
   - `debt-analyzer`: 観点11-18・25-27・33-38（設計・保守性・パフォーマンス）
   - UIコンポーネント/ページ/フォーム変更がある場合は `ux-reviewer` も追加する
 
 **監査モード (--audit):**
-- `debt-analyzer` と `code-reviewer` を**同時に**起動（並列）
+- `debt-analyzer` と `quality-reviewer` を**同時に**起動（並列）
 
 #### ドメインスキルレビュアーの追加起動
 

@@ -199,10 +199,10 @@ UI/UX:
 
 | スコア | リスクレベル | 起動するエージェント |
 |--------|------------|------------------|
-| 0–20   | 低リスク   | code-reviewer のみ |
-| 21–50  | 中リスク   | code-reviewer + security-auditor（並列） |
-| 51+    | 高リスク   | code-reviewer + security-auditor + type-checker + debt-analyzer（4並列） |
-| 品質監査 | 監査モード | debt-analyzer + code-reviewer（並列） |
+| 0–20   | 低リスク   | quality-reviewer + requirements-checker（並列） |
+| 21–50  | 中リスク   | quality-reviewer + requirements-checker + security-auditor（並列） |
+| 51+    | 高リスク   | quality-reviewer + requirements-checker + security-auditor + type-checker + debt-analyzer（5並列） |
+| 品質監査 | 監査モード | debt-analyzer + quality-reviewer（並列） |
 
 ### 条件付きエージェント追加
 
@@ -221,7 +221,8 @@ UI/UX:
 
 | エージェント | 担当観点 | 確認事項 |
 |------------|--------|--------|
-| **code-reviewer** | 1-5（正確性）, 19-24（信頼性・テスト）, 21（要件充足）, 40（リグレッション） | ロジック・エッジケース・状態遷移・副作用・冪等性・エラー処理・テスト・要件充足・既存機能への影響 |
+| **quality-reviewer** | 1-5（正確性）, 19-24（信頼性・テスト）, 40（リグレッション） | ロジック・エッジケース・状態遷移・副作用・冪等性・エラー処理・テスト・既存機能への影響 |
+| **requirements-checker** | 21（要件充足） | 仕様書照合・AC充足・実装漏れ・実装過剰・スコープ逸脱 |
 | **security-auditor** | 6-10（セキュリティ） | OWASP Top10・インジェクション・認証認可・機密情報・入力検証・依存安全性 |
 | **type-checker** | 28-32（型・インターフェース） | any/as/!使用・ランタイム型安全・zod解析・関数インターフェース設計 |
 | **debt-analyzer** | 11-18, 25-27, 33-38（設計・保守性・運用・パフォーマンス） | 層境界・DDD・複雑度・命名・N+1クエリ・キャッシュ・インデックス・マイグレーション |
@@ -249,7 +250,7 @@ CIで検出済み（報告不要）:
 - PR bodyに記載されたユーザー向けの変更概要（あれば）
 - 「エンジニアリング上の正確性は他エージェントが担当しているため、ユーザー体験の観点のみ報告すること」
 
-**`code-reviewer` を起動する場合、以下も伝える:**
+**`requirements-checker` を起動する場合、以下も伝える:**
 - PR bodyの全文（要件充足チェックに使用）
 - Step 2-A で収集した spec / AC の内容（あれば）
 
@@ -375,5 +376,5 @@ CIで検出済み（報告不要）:
 
 `.cm/gitstream.cm` がある場合、リスクレベルに対応するラベルが自動付与される:
 - `low-risk` → 自動続行
-- `medium-risk` → security-auditor + code-reviewer の結果を PR コメントに投稿
+- `medium-risk` → security-auditor + quality-reviewer + requirements-checker の結果を PR コメントに投稿
 - `high-risk` → 人間レビュー待ちをユーザーに通知

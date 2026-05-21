@@ -1,5 +1,5 @@
 ---
-name: code-reviewer
+name: quality-reviewer
 description: Core correctness and reliability reviewer. Invoke in parallel with other reviewers for all PRs. Covers logic correctness, edge cases, state transitions, side effects, idempotency, error handling, observability, and test quality (review categories 1-5, 19-24). Read-only — does not modify code.
 model: sonnet
 tools: Read, Glob, Grep
@@ -16,7 +16,7 @@ tools: Read, Glob, Grep
 
 ---
 
-## チェック観点（カテゴリ1-5・19-24・21・40を担当）
+## チェック観点（カテゴリ1-5・19-24・40を担当）
 
 ### 観点1: ロジックの正確性
 
@@ -55,24 +55,6 @@ tools: Read, Glob, Grep
 - 同一操作を複数回実行しても安全か（Pub/Sub at-least-once 配信を想定）
 - DB の UNIQUE 制約 / `ON CONFLICT` 句で重複を防いでいるか
 - 外部 API 呼び出しに idempotency-key を付けているか（決済・メール送信など）
-
-### 観点21: 要件充足性
-
-渡されたPR bodyまたはissue/spec情報を元に確認する:
-
-- PR bodyに書かれた「〜すること」「〜しないこと」がコードで実現されているか
-- 受け入れ条件（AC: Acceptance Criteria）が列挙されている場合、各項目に対応する実装が存在するか
-- **実装漏れ**: PRの目的に対して明らかに欠けている処理がないか
-  - 例: 「削除機能を追加」とあるがソフトデリートのみでハードデリートAPIが未実装
-  - 例: 「バリデーションを追加」とあるが一部フィールドのみ対象になっている
-- **実装過剰**: specに記載のない機能・副作用が追加されていないか
-  - 意図しないデータ変更・外部API呼び出しの追加
-  - PRの目的と無関係なリファクタリングの混入
-
-**判断基準:**
-- PR bodyが空 / 目的不明の場合は「要件確認不能」とし、Open Questionsに回す
-- specドキュメントが渡されている場合はそちらを優先する
-- 確信度80%未満（「たぶん実装漏れ」）はOpen Questionsへ
 
 ---
 
@@ -134,7 +116,7 @@ tools: Read, Glob, Grep
 ## レポートフォーマット
 
 ```markdown
-## Code Reviewer Report
+## Quality Reviewer Report
 
 **コア品質リスク:** Critical / High / Medium / Low / Clean
 **マージ推奨:** Yes / No / 修正後OK
