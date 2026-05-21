@@ -1,0 +1,22 @@
+{
+  "name": "3eer",
+  "owner": {
+    "name": "3eer",
+    "url": "https://github.com/3eer"
+  },
+  "metadata": {
+    "description": "3eer's Claude Code plugins — AI-driven development harness tools"
+  },
+  "plugins": [
+    {
+      "name": "devkit",
+      "description": "AI-driven development harness. Quality gates, autonomous QA loops, security scanning, and tech-debt visibility.",
+      "version": "2.0.0",
+      "author": {
+        "name": "3eer"
+      },
+      "category": "development",
+      "source": "./plugins/devkit"
+    }
+  ]
+}

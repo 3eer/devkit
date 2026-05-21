@@ -1,0 +1,20 @@
+{
+  "name": "devkit",
+  "version": "2.0.0",
+  "description": "AI-driven development harness for Claude Code. Quality gates, autonomous QA loops, security scanning, and tech-debt visibility — built for the 3eer workflow.",
+  "author": {
+    "name": "3eer",
+    "url": "https://github.com/3eer"
+  },
+  "homepage": "https://github.com/3eer/devkit",
+  "license": "MIT",
+  "keywords": [
+    "quality-gate",
+    "security",
+    "tech-debt",
+    "qa",
+    "code-review",
+    "harness",
+    "ai-driven-development"
+  ]
+}

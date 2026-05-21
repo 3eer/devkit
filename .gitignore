@@ -1,0 +1,7 @@
+# Claude Code auto-generated files
+.claude/
+
+# macOS
+.DS_Store
+
+output

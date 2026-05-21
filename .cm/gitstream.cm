@@ -1,0 +1,93 @@
+# devkit gitStream Configuration
+# Requires: gitStream GitHub App — https://github.com/apps/gitstream-cm
+# Docs: https://docs.gitstream.cm
+#
+# Place this file at .cm/gitstream.cm in your project repository (not in devkit itself).
+# Copy with: cp "$(claude plugin root devkit@3eer)/.cm/gitstream.cm" .cm/gitstream.cm
+
+manifest:
+  version: 1.0
+
+automations:
+
+  # -----------------------------------------------------------------------
+  # Low risk: docs / tests / config only, small changeset → auto-approve
+  # -----------------------------------------------------------------------
+  auto_approve_low_risk:
+    if:
+      - {{ files | match(list=['*.md', '*.txt', '*.rst', 'docs/**', 'test/**',
+                               'tests/**', '**/*.test.*', '**/*.spec.*',
+                               '**/__tests__/**', '**/*.stories.*']) | every }}
+      - {{ files | length < 10 }}
+    run:
+      - action: add-label@v1
+        args:
+          label: "devkit:low-risk"
+          color: "00CC44"
+      - action: approve@v1
+      - action: add-comment@v1
+        args:
+          comment: |
+            **devkit** 低リスク変更として自動承認しました。
+            対象: ドキュメント・テスト・設定ファイルのみ、10ファイル未満。
+
+  # -----------------------------------------------------------------------
+  # Medium risk: app code changes → recommend code-reviewer review
+  # -----------------------------------------------------------------------
+  label_medium_risk:
+    if:
+      - {{ not (files | match(list=['*.md', '*.txt', 'docs/**']) | every) }}
+      - {{ not (files | match(list=['infra/**', 'terraform/**', 'k8s/**',
+                                    '.github/workflows/**', '**/*.env*',
+                                    '**/migrations/**', '**/production*',
+                                    '**/prod.*']) | some) }}
+      - {{ files | length < 30 }}
+    run:
+      - action: add-label@v1
+        args:
+          label: "devkit:medium-risk"
+          color: "FF9900"
+      - action: add-comment@v1
+        args:
+          comment: |
+            **devkit** 中リスク変更が検出されました。AIレビューを推奨します。
+
+            Claude Code で以下を実行してください:
+            ```
+            /devkit:review
+            ```
+
+  # -----------------------------------------------------------------------
+  # High risk: infra / migrations / secrets / prod config → require human review
+  # -----------------------------------------------------------------------
+  require_human_review:
+    if:
+      - {{ files | match(list=['infra/**', 'terraform/**', 'k8s/**',
+                               '.github/workflows/**', '**/*.env*',
+                               '**/migrations/**', '**/production*',
+                               '**/prod.*', '**/secrets/**']) | some }}
+    run:
+      - action: add-label@v1
+        args:
+          label: "devkit:high-risk"
+          color: "CC0000"
+      - action: require-reviewers@v1
+        args:
+          reviewers:
+            - teams/senior-engineers
+          required_reviewers: 1
+      - action: add-comment@v1
+        args:
+          comment: |
+            **devkit** ⚠️ 高リスク変更が含まれています。**人間のレビューが必須です。**
+
+            セキュリティスキャンも実行してください:
+            ```
+            /devkit:scan
+            ```
+
+            変更を承認する前に以下を確認してください:
+            - [ ] 機密パス変更の意図は正しいか
+            - [ ] DBマイグレーションはロールバック可能か
+            - [ ] 環境変数変更はすべての環境に反映されるか
+            - [ ] セキュリティレビューを受けたか
