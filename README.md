@@ -30,9 +30,10 @@ devkit は Claude Code をハーネス基盤として使用し、品質保証レ
 │                                   post-edit-quality-check   │
 │                                   post-edit-semgrep         │
 │                                                             │
-│  V (Validation) agents/           code-reviewer  (review)   │
-│                                   test-runner    (QA+sec)   │
-│                                   debt-analyzer  (debt)     │
+│  V (Validation) agents/           quality-reviewer    (review)      │
+│                                   requirements-checker (review)     │
+│                                   test-runner         (QA+sec)      │
+│                                   debt-analyzer       (debt)        │
 │                                                             │
 │                 commands/         gate   review  scan       │
 │                                   test-loop  debt           │
@@ -61,7 +62,8 @@ flowchart TD
         H2[post-edit-quality-check] -->|PostToolUse hook| CC
         H3[post-edit-semgrep] -->|PostToolUse hook| CC
 
-        CC -->|invoke| A1[code-reviewer]
+        CC -->|invoke| A1[quality-reviewer]
+        CC -->|invoke| A1b[requirements-checker]
         CC -->|invoke| A2[test-runner]
         CC -->|invoke| A3[debt-analyzer]
     end
@@ -243,7 +245,8 @@ const apiKey = "sk-xxxxxxxxxxxxxxxxxxxx";
 
 | エージェント | 役割 | ツール |
 |------------|------|--------|
-| `code-reviewer` | コードレビュー専任（正確性・信頼性・テスト品質） | Read, Glob, Grep |
+| `quality-reviewer` | コードレビュー専任（正確性・信頼性・テスト品質） | Read, Glob, Grep |
+| `requirements-checker` | 要件充足専任（仕様書自動探索・AC照合・実装漏れ/過剰検出） | Read, Glob, Grep |
 | `security-auditor` | PRレビュー時のセキュリティ監査専任（Red Team・OWASP） | Read, Bash, Glob, Grep |
 | `type-checker` | 型安全性・インターフェース設計専任 | Read, Glob, Grep |
 | `test-runner` | QA・テスト実行専任（gate コマンド時のセキュリティスキャンも担当） | Read, Bash, Glob, Grep |
