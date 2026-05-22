@@ -10,7 +10,7 @@ version: 2.1.0
 allowed-tools: Read, Bash, Glob, Grep, Task
 ---
 
-# PR Review — 38観点・専門エージェント並列オーケストレーション
+# PR Review — 40観点・専門エージェント並列オーケストレーション
 
 このスキルはレビューの「交通整理役」です。レビュー対象を確定し、diff と周辺仕様を読んでリスクを評価し、
 担当エージェントを選定して並列で起動します。最終出力は「見つかった問題」を先に並べ、
@@ -140,18 +140,46 @@ rg -l "$ENTITY_ID_TYPE" -g '*.ts' -g '*.tsx' -g '*.py' -g '*.go' | head -40
 参照が見つかった場合、その集約への影響（Task/PostingPlan/Post等）を確認する。
 参照されているEntityを削除するコードはHIGH〜CRITICAL扱いとする。
 
-### 2-D: 既存APIのレスポンス仕様変更（BREAKING change）を検出する
+### 2-D: API・イベント・公開contractの互換性変更（BREAKING change）を検出する
 
 ```bash
 # ステータス値・フィールド名の変更をdiffで検索（例: "skipped" → "deleted"）
 git diff HEAD --unified=20 | rg "[-+].*(status|state|type|enum).*[\"']" | head -50
 
-# APIルートのレスポンス型変更を確認
-git diff HEAD --name-only | rg "(handler|controller|route|api|schema|contract)" | head -30
+# API/公開contractの変更を確認
+git diff HEAD --name-only | rg "(handler|controller|route|api|schema|contract|openapi|graphql|proto|sdk|webhook|event)" | head -50
 ```
 
-ステータス値・フィールド名・型の変更はfrontend/外部クライアントへの影響を必ず確認する。
-確認できない場合は「frontendへの影響要確認」としてHIGH以上で報告する。
+ステータス値・フィールド名・型の変更に加え、request body / query params / route path / pagination / sort / filter /
+webhook payload / event payload / GraphQL schema / SDK・public export の変更は frontend・外部クライアント・非同期consumerへの影響を必ず確認する。
+後方互換性や移行計画を確認できない場合は「contract互換性要確認」としてHIGH以上で報告する。
+
+### 2-E: 運用・リリース安全性を確認する
+
+```bash
+# リリース・運用・非同期処理に関わる変更を検索
+git diff HEAD --name-only | rg "(migration|schema|seed|backfill|queue|job|worker|cron|scheduler|feature|flag|env|config|deploy|docker|helm|k8s|terraform|workflow)" | head -50
+```
+
+以下に該当する場合は、ロールバック・段階リリース・既存データ/既存consumerとの互換性を確認する:
+- DB migration / backfill / seed の追加・変更
+- env/config/feature flag の追加・削除・意味変更
+- queue/job/worker/cron/scheduler の処理内容・payload・実行頻度変更
+- Docker/Kubernetes/Terraform/GitHub Actions 等のdeploy経路変更
+- 監視・ログ・メトリクス・アラートに影響する変更
+
+### 2-F: CI/check 状態を確認する
+
+```bash
+# GitHub PRの場合。失敗してもレビュー自体は継続する
+gh pr checks "$PR_NUMBER" 2>/dev/null
+
+# ローカルで利用可能な代表的チェックを確認
+rg '"(typecheck|lint|test|check)"' package.json pyproject.toml Cargo.toml Makefile justfile 2>/dev/null | head -40
+```
+
+CI/check が未実行・不明の場合は、最終レポートに「機械検出項目は未確認」と明記する。
+CIで検出可能としてスキップするのは、対象のcheckが実際に存在し、実行済みまたは実行予定であることを確認できた場合に限る。
 
 ---
 
@@ -172,10 +200,12 @@ git diff HEAD --name-only | rg "(handler|controller|route|api|schema|contract)" 
 破壊的変更の指標:
   DBマイグレーション (DROP/ALTER)             → +30
   APIシグネチャ削除・リネーム                  → +20
-  APIレスポンスのステータス値/フィールド名変更  → +25  ← BREAKING change（frontend影響必須確認）
+  API/イベント/公開contractの非互換変更        → +25  ← BREAKING change（client/consumer影響必須確認）
   env変数の追加・削除                          → +15
   依存関係の major バージョンアップ             → +20
   webpack/vite/tsconfig 等のビルド設定変更     → +10
+  queue/job/cron/scheduler のpayload・頻度変更  → +20
+  deploy/CI/CD/infra 設定変更                   → +20
 
 spec/設計整合性:
   specドキュメントが存在 & 実装との乖離あり    → +40  ← CRITICAL格上げ必須
@@ -186,6 +216,7 @@ spec/設計整合性:
   ロジック変更あり & テスト変更なし            → +20
   認証・認可コードの変更                       → +25
   外部 API・DB アクセスコードの変更            → +15
+  個人情報/機微データ/監査ログに関わる変更     → +25
 
 UI/UX:
   UIコンポーネント・ページ・フォームの変更     → +10  ← ux-reviewer 追加トリガー
@@ -209,8 +240,8 @@ UI/UX:
 スコアに関わらず、以下に該当する場合は該当エージェントを追加する:
 
 - 認証・認可、入力検証、依存関係、機密情報、外部公開APIを変更 → `security-auditor`
-- TypeScript の型定義、API contract、domain model、schema/parser を変更 → `type-checker`
-- DB migration、module boundary、依存方向、巨大ファイル、循環参照の疑い → `debt-analyzer`
+- TypeScript の型定義、API/event/webhook contract、domain model、schema/parser、SDK/public export を変更 → `type-checker`
+- DB migration、module boundary、依存方向、巨大ファイル、循環参照、queue/job/cron、deploy/infra/config の疑い → `debt-analyzer`
 - UIコンポーネント・ページ・フォーム・ユーザーフロー・ナビゲーションを変更 → `ux-reviewer`
 
 ---
@@ -221,11 +252,11 @@ UI/UX:
 
 | エージェント | 担当観点 | 確認事項 |
 |------------|--------|--------|
-| **quality-reviewer** | 1-5（正確性）, 19-24（信頼性・テスト）, 40（リグレッション） | ロジック・エッジケース・状態遷移・副作用・冪等性・エラー処理・テスト・既存機能への影響 |
+| **quality-reviewer** | 1-5（正確性）, 19-20・22-24（信頼性・テスト）, 40（リグレッション） | ロジック・エッジケース・状態遷移・副作用・冪等性・エラー処理・テスト・既存機能への影響 |
 | **requirements-checker** | 21（要件充足） | 仕様書照合・AC充足・実装漏れ・実装過剰・スコープ逸脱 |
 | **security-auditor** | 6-10（セキュリティ） | OWASP Top10・インジェクション・認証認可・機密情報・入力検証・依存安全性 |
 | **type-checker** | 28-32（型・インターフェース） | any/as/!使用・ランタイム型安全・zod解析・関数インターフェース設計 |
-| **debt-analyzer** | 11-18, 25-27, 33-38（設計・保守性・運用・パフォーマンス） | 層境界・DDD・複雑度・命名・N+1クエリ・キャッシュ・インデックス・マイグレーション |
+| **debt-analyzer** | 11-18, 25-27, 33-38（設計・保守性・運用・パフォーマンス） | 層境界・DDD・複雑度・命名・N+1クエリ・キャッシュ・インデックス・マイグレーション・リリース安全性 |
 | **ux-reviewer** | 39（UX整合性・アクセシビリティ） | エラーメッセージ・ローディング/空/エラー状態・ユーザージャーニー・フォーム・文言・a11y基本要件 |
 
 ### 観点の優先度（CIで自動検出可能なものは各エージェントがスキップ）
@@ -234,6 +265,10 @@ CIで検出済み（報告不要）:
 - tsc --noEmit による型エラー
 - ESLint / Biome による lint エラー
 - フォーマット違反
+
+CI/check が存在しない、または状態不明の場合:
+- 型・lint・formatの「明らかな未実行リスク」は Findings ではなく Open Questions / 推奨アクションに記録する
+- 手元で実行できる軽量checkが明確な場合は、レビュー前後に実行を提案または実行する
 
 ---
 
@@ -367,6 +402,8 @@ CIで検出済み（報告不要）:
 - [ ] DBマイグレーションはロールバック可能か（.down.sql が存在するか）
 - [ ] API変更は後方互換か、非互換なら移行計画はあるか
 - [ ] 環境変数変更はすべての環境に反映されるか
+- [ ] migration/backfill/queue/job/cron変更は既存versionと互換か
+- [ ] rollback・feature flag・監視/アラートの計画はあるか
 - [ ] セキュリティレビューを受けたか
 ```
 

@@ -35,6 +35,58 @@ git log --since="90 days ago" --name-only --format="" 2>/dev/null | \
 - 循環インポートの可能性を検出
 - 外部依存の集中 (一つのモジュールに多すぎる依存) を特定
 
+## PRレビュー観点（観点11-18・25-27・33-38）
+
+PRレビュー時（diffが渡された場合）は、ホットスポット分析よりも変更行と直接影響範囲を優先して以下を確認する。
+
+### 観点11: 責務分離・単一責任
+
+- 1つの関数/クラス/モジュールにUI・ドメイン・永続化・外部API呼び出しが混在していないか
+- 変更理由が異なる処理を同じ場所へ押し込んでいないか
+- 共通化により、本来別々の概念が同じ抽象にまとめられていないか
+
+### 観点12: レイヤー境界・依存方向
+
+- domain層がUI/framework/DB/HTTPなど上位・外側の実装詳細に依存していないか
+- infra層の型や例外がapplication/domain層の公開I/Fへ漏れていないか
+- module boundaryを越えて内部ファイルを直接importしていないか
+
+### 観点13: ドメインモデル・集約境界
+
+- 他集約のEntityを直接更新していないか
+- ID参照だけで足りる箇所に集約全体を渡して密結合にしていないか
+- invariantsがconstructor/factory/command handler等の一貫した場所で守られているか
+
+### 観点14: カプセル化・公開面
+
+- internal helperや実装詳細をpublic exportしていないか
+- public API/SDK/exportの追加が不要に広すぎないか
+- setterやmutable objectにより不正状態を外部から作れるようになっていないか
+
+### 観点15: 複雑度・可読性
+
+- 条件分岐やネストが増え、主要フローと例外フローが読みにくくなっていないか
+- フラグ引数やmode文字列で複数の振る舞いを1関数に詰め込んでいないか
+- 変更により既存の命名・配置規則から外れていないか
+
+### 観点16: 重複・抽象化の妥当性
+
+- 同じbusiness ruleが複数箇所へ複製されていないか
+- 逆に、偶然似ているだけの処理を早すぎる抽象化で結合していないか
+- 既存のhelper/serviceを使うべき箇所で別実装を追加していないか
+
+### 観点17: テスタビリティ
+
+- 時刻・乱数・外部API・DB・環境変数が直接参照され、テストで差し替え不能になっていないか
+- 大きな副作用を持つ処理が小さな単位で検証できない構造になっていないか
+- mock前提の実装詳細露出が増えていないか
+
+### 観点18: 設定・環境差分
+
+- env/configの追加・削除・意味変更が全環境（local/staging/prod/CI）で扱えるか
+- default値が本番で危険な挙動をしないか
+- feature flagのデフォルト、無効化手段、削除計画が妥当か
+
 ## パフォーマンス回帰チェック（観点25）
 
 PRレビュー時（diffが渡された場合）に実施する:
@@ -65,6 +117,56 @@ grep -n "for\|forEach\|map\|while" --include="*.ts" --include="*.py" --include="
 - N+1が新規導入された場合はHIGH以上で報告
 - 既存コードのN+1は報告しない（diffの外）
 - パフォーマンス劣化の「可能性」にとどまる場合はMEDIUM以下
+
+## データ・リリース安全性（観点26-27・33-38）
+
+### 観点26: キャッシュ・整合性
+
+- キャッシュキー変更で既存キャッシュが誤読されないか
+- invalidate範囲が過大/過小で、古いデータや全体flushを起こさないか
+- eventual consistencyを前提にする箇所で、読み取り側が中間状態を扱えるか
+
+### 観点27: DBクエリ・インデックス
+
+- 新規WHERE/JOIN/ORDER BYに対応するインデックスがあるか
+- 既存インデックスを使えない条件式・関数適用に変わっていないか
+- 大量データでOFFSET paginationや全件scanを導入していないか
+
+### 観点33: Migration互換性
+
+- migrationが既存アプリバージョンと前方/後方互換か
+- カラム削除/rename/type変更が段階移行になっているか
+- down/rollbackまたは復旧手順があるか
+
+### 観点34: Backfill・既存データ
+
+- 新規必須カラム・新規invariantに対して既存データのbackfillがあるか
+- backfillが冪等で再実行可能か
+- 大量データ更新がlock/timeouts/replication lagを起こさない設計か
+
+### 観点35: Queue・Job・Cron互換性
+
+- queue/job/webhook/event payload変更が既存producer/consumerと互換か
+- retry時に重複実行・順序入れ替わり・poison messageで停止しないか
+- cron/schedulerの頻度変更が外部API制限やDB負荷を超えないか
+
+### 観点36: Deploy・CI/CD・Infra
+
+- Docker/Kubernetes/Terraform/GitHub Actions等の変更がrollback可能か
+- secret/env/permissionの変更が各環境へ反映される前提になっていないか
+- build cacheやartifact名変更でdeploy対象がずれないか
+
+### 観点37: 観測性・運用
+
+- 重要な新規処理にログ/メトリクス/trace/alertがあるか
+- エラー率・遅延・queue depthなど、障害検知に必要な指標が取れるか
+- ログ量増加や高cardinality labelで運用コストを悪化させないか
+
+### 観点38: データ保持・プライバシー運用
+
+- 個人情報/機微データの保存・ログ出力・外部送信が増えていないか
+- 削除/匿名化/retention policyと矛盾していないか
+- audit logが必要な操作で記録が欠けていないか、逆に秘密情報を記録していないか
 
 ---
 

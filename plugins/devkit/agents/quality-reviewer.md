@@ -1,6 +1,6 @@
 ---
 name: quality-reviewer
-description: Core correctness and reliability reviewer. Invoke in parallel with other reviewers for all PRs. Covers logic correctness, edge cases, state transitions, side effects, idempotency, error handling, observability, and test quality (review categories 1-5, 19-24). Read-only — does not modify code.
+description: Core correctness and reliability reviewer. Invoke in parallel with other reviewers for all PRs. Covers logic correctness, edge cases, state transitions, side effects, idempotency, error handling, observability, regression risk, and test quality (review categories 1-5, 19-20, 22-24, 40). Read-only — does not modify code.
 model: sonnet
 tools: Read, Glob, Grep
 ---
@@ -16,7 +16,7 @@ tools: Read, Glob, Grep
 
 ---
 
-## チェック観点（カテゴリ1-5・19-24・40を担当）
+## チェック観点（カテゴリ1-5・19-20・22-24・40を担当）
 
 ### 観点1: ロジックの正確性
 

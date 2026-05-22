@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, Glob, Grep, Task
 
 引数: `$ARGUMENTS`
 
-38観点を4つの専門エージェントに割り当てて並列レビューを実行する。
+40観点を専門エージェントに割り当てて並列レビューを実行する。
 
 ---
 
@@ -137,35 +137,37 @@ rg --files <TARGET> \
 
 ### 2. `pr-review` スキルでコンテキスト収集とリスクスコア計算を行う
 
-スキルに従い、spec / ADR / cross-aggregate 参照 / API contract 変更を確認してから、
+スキルに従い、spec / ADR / cross-aggregate 参照 / API・イベント・公開 contract 変更 / 運用・リリース安全性 / CI・check状態を確認してから、
 変更ファイルをカテゴリ分類しリスクスコアを算出する。
 
 ### 3. リスクレベルに応じてエージェントを並列起動する
 
 **低リスク (0–20):**
 - `quality-reviewer` と `requirements-checker` を**同時に**起動（並列）
-  - quality-reviewer: 観点1-5（正確性）・19-24（信頼性・テスト）・40（リグレッション）
+  - quality-reviewer: 観点1-5（正確性）・19-20・22-24（信頼性・テスト）・40（リグレッション）
   - requirements-checker: 観点21（要件充足・仕様書照合）
 - ただし以下に該当する場合は、該当エージェントを追加する:
-  - 型/API contract/domain model 変更 → `type-checker`
+  - 型/API・イベント・webhook contract/domain model 変更 → `type-checker`
   - セキュリティ/認証/依存関係変更 → `security-auditor`
+  - DB migration/queue/job/cron/deploy/config 変更 → `debt-analyzer`
   - UIコンポーネント/ページ/フォーム変更 → `ux-reviewer`
 
 **中リスク (21–50):**
 - 以下のエージェントを**同時に**起動（並列）
-  - `quality-reviewer`: 観点1-5・19-24・40
+  - `quality-reviewer`: 観点1-5・19-20・22-24・40
   - `requirements-checker`: 観点21（要件充足・仕様書照合）
   - `security-auditor`: 観点6-10（OWASP・セキュリティ）
-- 型/API contract/domain model 変更がある場合は `type-checker` も追加する
+- 型/API・イベント・webhook contract/domain model 変更がある場合は `type-checker` も追加する
+- DB migration/queue/job/cron/deploy/config 変更がある場合は `debt-analyzer` も追加する
 - UIコンポーネント/ページ/フォーム変更がある場合は `ux-reviewer` も追加する
 
 **高リスク (51+):**
 - 以下のエージェントを**同時に**起動（並列）
-  - `quality-reviewer`: 観点1-5・19-24・40（リグレッション）
+  - `quality-reviewer`: 観点1-5・19-20・22-24・40（リグレッション）
   - `requirements-checker`: 観点21（要件充足・仕様書照合）
   - `security-auditor`: 観点6-10（セキュリティ Red Team）
   - `type-checker`: 観点28-32（型安全性・I/F設計）
-  - `debt-analyzer`: 観点11-18・25-27・33-38（設計・保守性・パフォーマンス）
+  - `debt-analyzer`: 観点11-18・25-27・33-38（設計・保守性・運用・パフォーマンス）
   - UIコンポーネント/ページ/フォーム変更がある場合は `ux-reviewer` も追加する
 
 **監査モード (--audit):**
@@ -213,7 +215,7 @@ SKILL_FILES に1件以上のファイルがある場合、**スキルファイ�
 - diff の内容（または対象ファイルリスト）
 - リスクスコアとその根拠（どのファイルがハイリスク判定か）
 - PR description または変更の目的（把握できている場合）
-- spec / cross-aggregate 参照 / API contract 変更の確認結果
+- spec / cross-aggregate 参照 / API・イベント・公開 contract 変更 / 運用・リリース安全性 / CI・check状態の確認結果
 - 担当する観点の番号と重点確認事項
 - CRITICAL / HIGH / MEDIUM / LOW の分類基準
 - 確信度 80% 未満の推測は Findings に入れず Open Questions に分離すること

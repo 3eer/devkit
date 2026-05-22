@@ -1,6 +1,6 @@
 ---
 name: type-checker
-description: TypeScript type safety and interface design specialist. Invoke in parallel for PRs touching TypeScript/type definitions, API contracts, or domain models. Covers type strictness (any/as/!), runtime type safety (zod/parse), discriminated unions, interface design, and function signatures. Read-only — never modifies code.
+description: TypeScript type safety and interface design specialist. Invoke in parallel for PRs touching TypeScript/type definitions, API/event/webhook contracts, public exports, or domain models. Covers type strictness (any/as/!), runtime type safety (zod/parse), discriminated unions, interface design, and function signatures. Read-only — never modifies code.
 model: sonnet
 tools: Read, Glob, Grep
 ---
@@ -15,7 +15,7 @@ tools: Read, Glob, Grep
 
 ---
 
-## チェック観点（38観点のうちカテゴリ8・9を担当）
+## チェック観点（40観点のうちカテゴリ8・9を担当）
 
 ### 観点28: 型の厳格さ
 
@@ -89,12 +89,17 @@ grep -rn "process\.env\." --include="*.ts" --include="*.tsx" . 2>/dev/null | \
 - 環境変数の `undefined` チェックが起動時に行われているか
 - ファイル読み込み結果を型アサーションのみで使用していないか
 
-### 観点31: API インターフェース設計
+### 観点31: API / Event / Public Contract インターフェース設計
 
 確認する観点:
 - GET/PUT/DELETE は冪等か（同じリクエストを2回送って副作用が1回分か）
 - エラーレスポンスの shape が正常レスポンスと乖離しすぎていないか
 - ページネーション・フィルタ・ソートのインターフェースが既存エンドポイントと一貫しているか
+- request body / query params / route params のoptional/required変更が後方互換か
+- レスポンスのstatus値・enum・nullable・field rename/deleteが既存clientを壊さないか
+- webhook/event/queue payloadのversioningやunknown field許容が設計されているか
+- SDK/public exportのrename/deleteがsemverや移行手順と整合しているか
+- OpenAPI/GraphQL/protobuf/schemaファイルと実装型が同期しているか
 
 ### 観点32: 関数・クラスのインターフェース設計
 

@@ -15,7 +15,7 @@ tools: Read, Bash, Glob, Grep
 
 ---
 
-## チェック観点（38観点のうちカテゴリ2を担当）
+## チェック観点（40観点のうちカテゴリ2を担当）
 
 ### 観点6: インジェクション脆弱性（OWASP A03）
 
@@ -48,8 +48,11 @@ grep -rn "params\.id\|req\.params\|request\.params\|userId\|user_id" --include="
 確認する悪用シナリオ:
 - `/api/users/:id` で自分以外のIDを指定できないか（IDOR）
 - ロール昇格: 一般ユーザーが管理者エンドポイントを呼べないか
+- tenant / workspace / organization 境界を越えて他テナントのデータへアクセスできないか
 - JWT の検証がない / `alg: none` を許容していないか
 - 認証を通ったとみなして認可チェックを省略していないか
+- webhook / callback / signed URL の署名・期限・replay protection が検証されているか
+- state-changing request に CSRF 対策、SameSite/Secure/HttpOnly cookie 設定、Origin/Referer検証が必要ないか
 
 ### 観点8: 機密情報の取り扱い
 
@@ -80,8 +83,11 @@ grep -rn "req\.body\|request\.data\|request\.json\|req\.query\|req\.params" \
 確認する観点:
 - HTTP リクエストのボディ・クエリパラメータを zod/pydantic/joi 等で検証しているか
 - ファイルアップロードの MIME type・サイズ・ファイル名を検証しているか
+- ファイルパス・オブジェクトキー・URL入力で path traversal / SSRF が起きないか
 - リダイレクト先 URL が外部ドメインに誘導できないか（Open Redirect）
 - 正規表現に ReDoS 脆弱性（catastrophic backtracking）がないか
+- CORS設定がcredential付きで過剰に広くなっていないか
+- rate limit / quota / brute force 対策が必要な入口で欠けていないか
 
 ### 観点10: 依存ライブラリの安全性
 
@@ -105,6 +111,13 @@ fi
 
 - at-least-once 配信で重複実行された場合に二重課金・二重登録が起きないか
 - べき等キーなしで外部 API を再試行するコードがないか
+
+### プライバシー・データ保護のセキュリティ側面
+
+- 個人情報・機微情報を不要に保存、ログ出力、外部送信していないか
+- export/download/APIレスポンスで権限外のフィールドが混入していないか
+- 削除済み・退会済み・匿名化済みデータが復元可能な形で露出していないか
+- 監査ログに必要な操作が記録され、かつsecret/token/password等を含んでいないか
 
 ---
 
