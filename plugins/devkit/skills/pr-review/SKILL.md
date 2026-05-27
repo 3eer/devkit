@@ -38,7 +38,34 @@ gh pr view "$PR_NUMBER" --json title,body,additions,deletions,changedFiles 2>/de
 
 ---
 
-## Step 1: diff と変更ファイルを取得する
+## Step 1: ベースブランチを確定してから diff を取得する
+
+### ベースブランチの自動検出（`--base` 未指定時）
+
+ハードコードせず、以下の優先順位でベースブランチを決定する:
+
+```bash
+# 1. ブランチの追跡設定から merge 先を確認
+git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null
+
+# 2. git log で分岐点を探し、develop / main / master のどれから切られたか確認
+git log --oneline --decorate origin/develop...HEAD 2>/dev/null | tail -1
+git log --oneline --decorate origin/main...HEAD 2>/dev/null | tail -1
+
+# 3. develop ブランチの存在確認
+git show-ref --verify --quiet refs/remotes/origin/develop 2>/dev/null && echo "develop exists"
+git show-ref --verify --quiet refs/heads/develop 2>/dev/null && echo "develop exists (local)"
+```
+
+**判定ルール（優先順位順）:**
+1. `--base <branch>` が明示指定されていればそれを使う
+2. `git rev-parse @{u}` でトラッキングブランチが取れればそのリモート名（`origin/develop` → `develop`）を使う
+3. `git log` で `origin/develop...HEAD` のコミット数が `origin/main...HEAD` より少なければ `develop` を、そうでなければ `main` を使う
+4. `origin/develop` が存在すれば `develop`、存在しなければ `main`
+
+確定したベースブランチを **BASE_BRANCH** として以降で使用する。
+
+---
 
 ### ユースケース A: 自己レビュー（push 前）
 
@@ -52,12 +79,13 @@ git diff HEAD --unified=80
 
 ```bash
 # PR番号 $PR_NUMBER が渡された場合
-gh pr view "$PR_NUMBER" --json title,body,additions,deletions,changedFiles 2>/dev/null
+gh pr view "$PR_NUMBER" --json title,body,additions,deletions,changedFiles,baseRefName 2>/dev/null
+# baseRefName フィールドで PR のベースブランチを確認し、BASE_BRANCH を上書きする
 gh pr diff "$PR_NUMBER" 2>/dev/null
 
-# ブランチ名が渡された場合
-git diff origin/main..."$BRANCH" --stat
-git diff origin/main..."$BRANCH" --unified=80
+# ブランチ名が渡された場合: 上記で確定した BASE_BRANCH を使う
+git diff origin/$BASE_BRANCH..."$BRANCH" --stat
+git diff origin/$BASE_BRANCH..."$BRANCH" --unified=80
 ```
 
 ### ユースケース C: 既存コード一括スキャン（品質監査）

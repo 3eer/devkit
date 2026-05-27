@@ -16,10 +16,10 @@ allowed-tools: Bash, Read, Glob, Grep, Task
 
 | 引数 | ユースケース | 動作 |
 |------|-----------|------|
-| なし | push前の自己レビュー | `git diff develop...HEAD` を対象にレビュー（developが存在しない場合は `main` にフォールバック） |
+| なし | push前の自己レビュー | git log等からベースブランチを自動検出して `git diff <BASE_BRANCH>...HEAD` を対象にレビュー |
 | `--base <branch>` | ベースブランチ指定 | `git diff <branch>...HEAD` を対象にレビュー |
-| `123` (数値) | GitHub PR レビュー | `gh pr diff 123` を対象にレビュー |
-| `feature/xxx` (ブランチ名) | ブランチレビュー | `git diff develop...feature/xxx` を対象にレビュー（`--base` で変更可） |
+| `123` (数値) | GitHub PR レビュー | `gh pr diff 123` + PR の `baseRefName` でベースブランチを確認してレビュー |
+| `feature/xxx` (ブランチ名) | ブランチレビュー | git log等からベースブランチを自動検出して `git diff <BASE_BRANCH>...feature/xxx` を対象にレビュー（`--base` で上書き可） |
 | `--audit [path]` | 品質監査 | 既存コードをホットスポット優先でスキャン |
 
 ---
@@ -74,15 +74,25 @@ find . -maxdepth 5 -path "*/.claude/skills/*.md" \
 
 #### STEP 3: BASE_BRANCH を確定する（`--base` 未指定の場合のみ）
 
-`--base` が指定されなかった場合、以下を実行して `develop` の存在を確認する:
+`--base` が指定されなかった場合、以下を順番に実行してベースブランチを特定する:
 
 ```bash
-git show-ref --verify --quiet refs/remotes/origin/develop 2>/dev/null || \
-git show-ref --verify --quiet refs/heads/develop 2>/dev/null
-echo "exit: $?"
+# 1. トラッキングブランチから merge 先を確認
+git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null
+
+# 2. git log で分岐点の候補を確認（コミット数が少ない方が実際の分岐元）
+git rev-list --count origin/develop...HEAD 2>/dev/null
+git rev-list --count origin/main...HEAD 2>/dev/null
+
+# 3. develop ブランチの存在確認
+git show-ref --verify --quiet refs/remotes/origin/develop 2>/dev/null && echo "develop_exists"
+git show-ref --verify --quiet refs/heads/develop 2>/dev/null && echo "develop_exists_local"
 ```
 
-exit が 0 なら BASE_BRANCH = `develop`、それ以外なら BASE_BRANCH = `main`。
+**判定ルール（優先順位順）:**
+1. `git rev-parse @{u}` でトラッキングブランチが取得できた場合、そのブランチ名を BASE_BRANCH とする（例: `origin/develop` → `develop`）
+2. `origin/develop...HEAD` と `origin/main...HEAD` の両方のコミット数を比較し、コミット数が少ない方を BASE_BRANCH とする（分岐が近い方が実際の親ブランチ）
+3. `origin/develop` が存在すれば `develop`、存在しなければ `main`
 
 #### STEP 4: REVIEW_TARGET に応じてコマンドを実行する
 
