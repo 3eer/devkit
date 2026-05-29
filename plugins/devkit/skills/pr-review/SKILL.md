@@ -1,5 +1,16 @@
 ---
 name: pr-review
+type: orchestrate
+mutating: false
+user-invocable: true
+argument-hint: "[PR番号 or ブランチ名 or --base <branch>]"
+dependencies:
+  - quality-reviewer
+  - requirements-checker
+  - security-auditor
+  - type-checker
+  - debt-analyzer
+  - ux-reviewer
 description: |
   Use this skill when reviewing a pull request, self-reviewing before push, scanning existing
   code for quality, or when Claude has finished implementing a feature. Orchestrates parallel
@@ -7,7 +18,24 @@ description: |
   "is this safe to merge", "before I push", "pre-merge check", "scan this directory",
   PRのレビュー, マージ前確認, push前確認, 変更のリスク評価, コード品質チェック.
 version: 2.1.0
-allowed-tools: Read, Bash, Glob, Grep, Task
+tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
+  - Agent
+triggers:
+  - "review this PR"
+  - "check the diff"
+  - "is this safe to merge"
+  - "before I push"
+  - "pre-merge check"
+  - "scan this directory"
+  - PRのレビュー
+  - マージ前確認
+  - push前確認
+  - 変更のリスク評価
+  - コード品質チェック
 ---
 
 # PR Review — 40観点・専門エージェント並列オーケストレーション

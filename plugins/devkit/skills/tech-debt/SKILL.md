@@ -1,5 +1,11 @@
 ---
 name: tech-debt
+type: orchestrate
+mutating: false
+user-invocable: true
+argument-hint: "[対象パス or --days <日数>]"
+dependencies:
+  - debt-analyzer
 description: |
   Use this skill when the user asks about technical debt, code quality metrics, hotspot
   analysis, refactoring opportunities, architectural issues, or wants to understand where
@@ -7,7 +13,26 @@ description: |
   "code quality report", "what needs cleanup", "complexity analysis", "where is the mess",
   技術負債, ホットスポット, リファクタ候補, コード品質, 複雑度分析, 整理が必要な箇所.
 version: 1.0.0
-allowed-tools: Read, Bash, Glob, Grep
+tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
+  - Agent
+triggers:
+  - "tech debt"
+  - "hotspots"
+  - "refactor candidates"
+  - "code quality report"
+  - "what needs cleanup"
+  - "complexity analysis"
+  - "where is the mess"
+  - 技術負債
+  - ホットスポット
+  - リファクタ候補
+  - コード品質
+  - 複雑度分析
+  - 整理が必要な箇所
 ---
 
 # Tech Debt Analysis & Visualization

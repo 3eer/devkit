@@ -1,12 +1,40 @@
 ---
 name: deep-research
+type: orchestrate
+mutating: false
+user-invocable: true
+argument-hint: "<調査トピック> [--mode quick|standard|deep]"
+dependencies:
+  - fact-collector
+  - fact-verifier
+  - report-writer
 description: |
   Use this skill when the user asks to research, investigate, compare, or analyze any topic
   deeply. Orchestrates parallel sub-agents across fact collection, verification, and report
   writing phases. Triggers on: "research", "investigate", "compare", "analyze", "deep dive",
   "調べて", "リサーチ", "調査して", "比較して", "詳しく教えて", "深掘り".
 version: 1.0.0
-allowed-tools: Read, Bash, Glob, Grep, WebSearch, WebFetch, Agent, AskUserQuestion
+tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
+  - WebSearch
+  - WebFetch
+  - Agent
+  - AskUserQuestion
+triggers:
+  - "research"
+  - "investigate"
+  - "compare"
+  - "analyze"
+  - "deep dive"
+  - 調べて
+  - リサーチ
+  - 調査して
+  - 比較して
+  - 詳しく教えて
+  - 深掘り
 ---
 
 # Deep Research — 並列サブエージェント・オーケストレーション

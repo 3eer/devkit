@@ -1,5 +1,12 @@
 ---
 name: security-gate
+type: orchestrate
+mutating: false
+user-invocable: true
+argument-hint: "[スキャン対象パス or パッケージ名]"
+dependencies:
+  - security-auditor
+  - test-runner
 description: |
   Use this skill when adding dependencies, writing authentication or authorization code,
   handling user input, creating API endpoints, working with environment variables or secrets,
@@ -8,7 +15,26 @@ description: |
   "scan for vulnerabilities", "check secrets", "security review",
   依存関係を追加, セキュリティチェック, 脆弱性スキャン, 認証, 認可, シークレット.
 version: 1.0.0
-allowed-tools: Read, Bash, Glob, Grep
+tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
+  - Agent
+triggers:
+  - "add this package"
+  - "install dependency"
+  - "handle auth"
+  - "is this secure"
+  - "scan for vulnerabilities"
+  - "check secrets"
+  - "security review"
+  - 依存関係を追加
+  - セキュリティチェック
+  - 脆弱性スキャン
+  - 認証
+  - 認可
+  - シークレット
 ---
 
 # Security Gate

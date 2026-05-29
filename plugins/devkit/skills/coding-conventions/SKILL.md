@@ -1,5 +1,8 @@
 ---
 name: coding-conventions
+type: load
+mutating: false
+user-invocable: false
 description: |
   Use this skill when starting a new feature, creating files, asking about code style or
   architecture patterns, or when Claude is about to write substantial code. Also activates
@@ -8,7 +11,21 @@ description: |
   Ensures PostToolUse hooks run lint/format/typecheck after every edit.
   コーディング規約, アーキテクチャ方針, スタイルガイド, コードを書く, 実装する.
 version: 1.0.0
-allowed-tools: Read, Glob, Grep, Bash
+tools:
+  - Read
+  - Glob
+  - Grep
+  - Bash
+triggers:
+  - "follow our conventions"
+  - "write idiomatic code"
+  - "check the style"
+  - "make it consistent"
+  - コーディング規約
+  - アーキテクチャ方針
+  - スタイルガイド
+  - コードを書く
+  - 実装する
 ---
 
 # Coding Conventions & Output Quality

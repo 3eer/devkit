@@ -1,12 +1,38 @@
 ---
 name: qa-loop
+type: orchestrate
+mutating: true
+user-invocable: true
+argument-hint: "[テストコマンド or ファイルパス]"
+dependencies:
+  - test-runner
+writes_to:
+  - .
 description: |
   Use this skill when the user asks to run tests, fix failing tests, set up a test loop,
   do test-driven development, or when Claude has just written code and should verify it works.
   Triggers on: "run the tests", "fix the tests", "TDD", "make tests pass", "autonomous testing",
   "QA", "test loop", テストを実行, テストを直して, テストが通るまで, 自律テスト, QA環境.
 version: 1.0.0
-allowed-tools: Read, Bash, Glob, Grep
+tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
+  - Edit
+  - Write
+  - Agent
+triggers:
+  - "run the tests"
+  - "fix the tests"
+  - "TDD"
+  - "make tests pass"
+  - "autonomous testing"
+  - "test loop"
+  - テストを実行
+  - テストを直して
+  - テストが通るまで
+  - 自律テスト
 ---
 
 # Autonomous QA Loop
