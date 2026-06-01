@@ -1,6 +1,6 @@
 ---
-name: security-gate
-type: orchestrate
+name: security-gate-reader
+type: reader
 mutating: false
 user-invocable: true
 argument-hint: "[スキャン対象パス or パッケージ名]"

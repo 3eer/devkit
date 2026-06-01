@@ -1,6 +1,6 @@
 ---
-name: qa-loop
-type: orchestrate
+name: qa-workflow
+type: workflow
 mutating: true
 user-invocable: true
 argument-hint: "[テストコマンド or ファイルパス]"

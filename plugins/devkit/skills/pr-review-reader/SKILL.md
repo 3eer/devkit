@@ -1,6 +1,6 @@
 ---
-name: pr-review
-type: orchestrate
+name: pr-review-reader
+type: reader
 mutating: false
 user-invocable: true
 argument-hint: "[PR番号 or ブランチ名 or --base <branch>]"

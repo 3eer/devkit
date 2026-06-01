@@ -1,6 +1,6 @@
 ---
-name: tech-debt
-type: orchestrate
+name: tech-debt-reader
+type: reader
 mutating: false
 user-invocable: true
 argument-hint: "[対象パス or --days <日数>]"

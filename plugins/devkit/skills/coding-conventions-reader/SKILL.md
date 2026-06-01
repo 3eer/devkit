@@ -1,6 +1,6 @@
 ---
-name: coding-conventions
-type: load
+name: coding-conventions-reader
+type: reader
 mutating: false
 user-invocable: false
 description: |
