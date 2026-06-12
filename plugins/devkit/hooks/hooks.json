@@ -1,5 +1,5 @@
 {
-  "description": "devkit quality gate and security hooks — runs on every Write/Edit/MultiEdit without touching global settings.json",
+  "description": "devkit quality gate, security, and dangerous-command hooks — runs on Write/Edit/MultiEdit and Bash without touching global settings.json",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,16 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/pre-write-secrets-check.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/pre-bash-deny-commands.sh\"",
             "timeout": 10
           }
         ]

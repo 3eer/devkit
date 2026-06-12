@@ -238,6 +238,7 @@ const apiKey = "sk-xxxxxxxxxxxxxxxxxxxx";
 | `qa-loop` | テスト実行・失敗修正・TDD |
 | `security-gate` | 依存関係追加・認証実装・セキュリティ確認 |
 | `tech-debt` | 技術負債・ホットスポット・リファクタ候補確認 |
+| `implement-to-pr-workflow` | 「実装してPRまで」「マージ判断まで」— 実装→テストループ→敵対的レビュー→Live Proof（実物実証）→全要件トレース→PR作成→マージ判断の提出を1依頼で完結。AI はマージせず人間に二択を渡す（`/devkit:implement-to-pr-workflow` で明示起動も可） |
 
 ---
 
