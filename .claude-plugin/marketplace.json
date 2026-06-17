@@ -11,7 +11,7 @@
     {
       "name": "devkit",
       "description": "AI-driven development harness. Quality gates, autonomous QA loops, security scanning, and tech-debt visibility.",
-      "version": "2.5.0",
+      "version": "2.4.0",
       "author": {
         "name": "3eer"
       },
