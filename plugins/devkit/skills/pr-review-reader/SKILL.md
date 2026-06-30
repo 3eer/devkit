@@ -144,8 +144,10 @@ find . -maxdepth 4 \( -name "CLAUDE.md" -o -path "*/.claude/*.md" \) \
   -not -path "*/node_modules/*" 2>/dev/null | head -20
 
 # .agents/ 配下のエージェント定義・ルール
-find . -maxdepth 4 -path "*/.agents/*" \
-  -not -path "*/node_modules/*" 2>/dev/null | head -20
+# -L: .claude/ が .agents/ への symlink である構成（meo-agent 等）でもリンク先を辿る。
+#     -L が無いと symlink 配下の定義・skill が 0 件になる。
+find -L . -maxdepth 4 -path "*/.agents/*" \
+  -not -path "*/node_modules/*" 2>/dev/null | head -40
 
 # コーディング規約・リントルール
 find . -maxdepth 3 \( \
@@ -171,6 +173,21 @@ rg -l "$FEATURE_KEYWORD" docs openspec specs . 2>/dev/null | head -20
 ```
 
 **見つかったspec/設計ドキュメントは必ず読む。** 実装とspecの明確な乖離は CRITICAL 扱いとする。
+
+**docs 同期の欠落検出:** リポに「コード変更時に対応する docs/spec の更新を求める」ルール
+（例: `docs/rules/docs-sync-policy.md` / `docs-sync-guard` skill / CONTRIBUTING の docs 同期節）が
+存在する場合、diff の変更ファイルに対して**対応する docs が同じ diff に含まれているか**を確認する。
+
+```bash
+# docs 同期ルールの有無を確認
+rg -l "docs.sync|docs/spec|ドキュメント同期|spec 同期|仕様書.*更新" \
+  CLAUDE.md docs CONTRIBUTING.md 2>/dev/null | head
+# diff に docs/spec の更新が含まれているか（含まれていなければ欠落候補）
+```
+
+ルールが存在し、かつ「契約・仕様の変化」（API/zod スキーマ・集約・状態遷移・batch trigger・
+新しい意味論の導入 等）を伴う diff なのに docs 側の更新が無い場合は、欠落として報告する
+（リポルールが MUST 相当なら HIGH、推奨なら MEDIUM）。単なる実装内部のリファクタは対象外。
 
 ### 2-B: ドメインキーワードのコンテキストを把握する
 
@@ -287,9 +304,15 @@ UI/UX:
 | スコア | リスクレベル | 起動するエージェント |
 |--------|------------|------------------|
 | 0–20   | 低リスク   | quality-reviewer + requirements-checker（並列） |
-| 21–50  | 中リスク   | quality-reviewer + requirements-checker + security-auditor（並列） |
+| 21–50  | 中リスク   | quality-reviewer + requirements-checker + security-auditor + debt-analyzer（並列） |
 | 51+    | 高リスク   | quality-reviewer + requirements-checker + security-auditor + type-checker + debt-analyzer（5並列） |
 | 品質監査 | 監査モード | debt-analyzer + quality-reviewer（並列） |
+
+> **debt-analyzer は中リスク以上で常時起動する。** debt-analyzer は観点25（パフォーマンス・
+> 不要な再計算/再アロケーション）と観点33-38（運用・構造化ログ・トレーサビリティ）を担当する
+> **唯一**のエージェント。これを「config/DB 変更があるときだけ」の条件付きにすると、ロジック
+> 追加を伴う通常の実装 PR で「ログに操作者 ID が無い」「render ごとに重い計算が走る」といった
+> 観点が丸ごと落ちる（実例: PR でこれらが review bot に後から指摘された）。
 
 ### 条件付きエージェント追加
 
@@ -298,6 +321,9 @@ UI/UX:
 - 認証・認可、入力検証、依存関係、機密情報、外部公開APIを変更 → `security-auditor`
 - TypeScript の型定義、API/event/webhook contract、domain model、schema/parser、SDK/public export を変更 → `type-checker`
 - DB migration、module boundary、依存方向、巨大ファイル、循環参照、queue/job/cron、deploy/infra/config の疑い → `debt-analyzer`
+  - **「config」はインフラ（terraform/k8s/env）だけでなく、アプリ内の DI/配線コード（`server.ts` /
+    `bootstrap` / composition root / DI container）も含む。** ここに新依存を足す PR は背後で
+    新しいロジック経路が増えているサインなので debt-analyzer 対象。
 - UIコンポーネント・ページ・フォーム・ユーザーフロー・ナビゲーションを変更 → `ux-reviewer`
 
 ---
@@ -347,6 +373,11 @@ CI/check が存在しない、または状態不明の場合:
 
 **全エージェント共通: 以下を必ず含める:**
 - 「何を確認するか」を明確に記述する（例: 「観点3（状態遷移）の idempotent return アンチパターンを特に確認してください」）
+- **「ただし重点はあくまで追加であり、あなたの担当観点はすべて独立に確認すること。特に
+  軽量な品質観点（ログ・トレーサビリティ、命名規約、不要な再計算/メモ化、エラーメッセージの
+  文言）を、重いバグ観点（状態遷移・冪等性・データ整合性）の陰で省略しないこと」**
+  （重点指示でエージェントの担当観点を狭めると、本来カバーすべき軽量観点が落ちる。重点は
+  「先に見る」であって「だけ見る」ではない、と必ず伝える）
 - 「各問題を CRITICAL / HIGH / MEDIUM / LOW で分類して報告すること」
 - 「CRITICAL の基準: spec/設計との乖離、データ破壊・消失リスク、認証認可バイパス、silent failure でユーザーが気づけない不整合」
 - 「確信度 80% 未満の推測は Findings に入れず、必要なら Open Questions に回すこと」

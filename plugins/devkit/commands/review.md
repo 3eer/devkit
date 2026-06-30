@@ -37,7 +37,8 @@ find . -maxdepth 4 \( -name "CLAUDE.md" -o -path "*/.claude/*.md" \) \
   -not -path "*/node_modules/*" 2>/dev/null
 
 # .agents/ 配下のエージェント定義・ルール
-find . -maxdepth 4 -path "*/.agents/*" \
+# -L: .claude/ が .agents/ へのシンボリックリンクの構成があるため、リンクを辿る
+find -L . -maxdepth 4 -path "*/.agents/*" \
   -not -path "*/node_modules/*" 2>/dev/null
 
 # コーディング規約・アーキテクチャ指針
@@ -53,13 +54,28 @@ find . -maxdepth 3 \( \
 #### ドメインスキルの検出
 
 ```bash
-# .claude/skills/ 配下のスキルファイルを列挙（最大5件）
-find . -maxdepth 5 -path "*/.claude/skills/*.md" \
-  -not -path "*/node_modules/*" 2>/dev/null | head -5
+# .claude/skills/ 配下の SKILL.md を列挙する。
+# -L: .claude/skills/ が .agents/skills/ への symlink である構成（meo-agent 等）でも
+#     リンク先の実体を辿るために必須。-L が無いと symlink 配下の skill が 0 件になる。
+# SKILL.md のみ（references/*.md 等の補助ファイルは除外）に絞る。
+find -L . -maxdepth 5 -path "*/.claude/skills/*/SKILL.md" \
+  -not -path "*/node_modules/*" 2>/dev/null | sort
 ```
 
-見つかったファイルを **SKILL_FILES** リストとして記録する（内容はまだ読まない）。
+見つかったファイルを **SKILL_FILES** 候補リストとして記録する（内容はまだ読まない）。
 このリストはステップ3でエージェントを追加起動する際に使用する。
+
+**SKILL_FILES の選別（候補が多い場合）:**
+
+skill が多数あるリポ（meo-agent は 40 件超）では全件を skill-reviewer に回すと並列数が爆発する。
+**diff の変更内容に関連する skill を優先**して最大 8 件まで選ぶ。判断材料:
+
+1. **常に優先**: silent-failure / docs-sync / error-handling / aggregate / race-condition 等、
+   「本番事故・整合性・観測性・ドキュメント同期」に直結する横断 skill（diff の領域を問わず効く）
+2. 変更ファイルのパス・ドメイン語と SKILL.md の `description` が一致する skill
+3. 上記で 8 件に満たない場合のみ、残りをアルファベット順で補充
+
+選別後の SKILL_FILES が空になることは避ける（横断 skill は最低限残す）。
 
 ### 1. 引数をパースして diff を取得する
 
@@ -217,7 +233,7 @@ SKILL_FILES に1件以上のファイルがある場合、**スキルファイ�
 （問題がなければこのセクション全体を省略）
 ```
 
-**上限:** SKILL_FILES が5件を超える場合は、ファイル名をアルファベット順にソートして上位5件のみ起動する。
+**上限:** SKILL_FILES はステップ0の選別で最大 8 件に絞られている。各 1 件につき 1 つの `skill-reviewer` を起動する。
 
 ### 4. 各エージェントへのコンテキスト指示
 
