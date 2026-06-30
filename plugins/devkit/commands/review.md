@@ -37,7 +37,8 @@ find . -maxdepth 4 \( -name "CLAUDE.md" -o -path "*/.claude/*.md" \) \
   -not -path "*/node_modules/*" 2>/dev/null
 
 # .agents/ 配下のエージェント定義・ルール
-find . -maxdepth 4 -path "*/.agents/*" \
+# -L: .claude/ が .agents/ へのシンボリックリンクの構成があるため、リンクを辿る
+find -L . -maxdepth 4 -path "*/.agents/*" \
   -not -path "*/node_modules/*" 2>/dev/null
 
 # コーディング規約・アーキテクチャ指針
@@ -53,13 +54,28 @@ find . -maxdepth 3 \( \
 #### ドメインスキルの検出
 
 ```bash
-# .claude/skills/ 配下のスキルファイルを列挙（最大5件）
-find . -maxdepth 5 -path "*/.claude/skills/*.md" \
-  -not -path "*/node_modules/*" 2>/dev/null | head -5
+# .claude/skills/ 配下の SKILL.md を列挙する。
+# -L: .claude/skills/ が .agents/skills/ への symlink である構成（meo-agent 等）でも
+#     リンク先の実体を辿るために必須。-L が無いと symlink 配下の skill が 0 件になる。
+# SKILL.md のみ（references/*.md 等の補助ファイルは除外）に絞る。
+find -L . -maxdepth 5 -path "*/.claude/skills/*/SKILL.md" \
+  -not -path "*/node_modules/*" 2>/dev/null | sort
 ```
 
-見つかったファイルを **SKILL_FILES** リストとして記録する（内容はまだ読まない）。
+見つかったファイルを **SKILL_FILES** 候補リストとして記録する（内容はまだ読まない）。
 このリストはステップ3でエージェントを追加起動する際に使用する。
+
+**SKILL_FILES の選別（候補が多い場合）:**
+
+skill が多数あるリポ（meo-agent は 40 件超）では全件を skill-reviewer に回すと並列数が爆発する。
+**diff の変更内容に関連する skill を優先**して最大 8 件まで選ぶ。判断材料:
+
+1. **常に優先**: silent-failure / docs-sync / error-handling / aggregate / race-condition 等、
+   「本番事故・整合性・観測性・ドキュメント同期」に直結する横断 skill（diff の領域を問わず効く）
+2. 変更ファイルのパス・ドメイン語と SKILL.md の `description` が一致する skill
+3. 上記で 8 件に満たない場合のみ、残りをアルファベット順で補充
+
+選別後の SKILL_FILES が空になることは避ける（横断 skill は最低限残す）。
 
 ### 1. 引数をパースして diff を取得する
 
@@ -167,8 +183,13 @@ rg --files <TARGET> \
   - `quality-reviewer`: 観点1-5・19-20・22-24・40
   - `requirements-checker`: 観点21（要件充足・仕様書照合）
   - `security-auditor`: 観点6-10（OWASP・セキュリティ）
+  - `debt-analyzer`: 観点11-18・25-27・33-38（設計・保守性・運用・パフォーマンス）
+    — **中リスク以上で常時起動**。観点25（不要な再計算/再アロケーション）と観点33-38
+    （構造化ログ・トレーサビリティ）を担当する唯一のエージェントで、条件付きにすると
+    通常の実装 PR でこれらが落ちる
 - 型/API・イベント・webhook contract/domain model 変更がある場合は `type-checker` も追加する
-- DB migration/queue/job/cron/deploy/config 変更がある場合は `debt-analyzer` も追加する
+- アプリ内の DI/配線コード（`server.ts` / composition root / DI container）に新依存を足す
+  変更も `debt-analyzer` 対象（背後で新ロジック経路が増えているサイン）
 - UIコンポーネント/ページ/フォーム変更がある場合は `ux-reviewer` も追加する
 
 **高リスク (51+):**
@@ -217,7 +238,7 @@ SKILL_FILES に1件以上のファイルがある場合、**スキルファイ�
 （問題がなければこのセクション全体を省略）
 ```
 
-**上限:** SKILL_FILES が5件を超える場合は、ファイル名をアルファベット順にソートして上位5件のみ起動する。
+**上限:** SKILL_FILES はステップ0の選別で最大 8 件に絞られている。各 1 件につき 1 つの `skill-reviewer` を起動する。
 
 ### 4. 各エージェントへのコンテキスト指示
 
@@ -227,6 +248,9 @@ SKILL_FILES に1件以上のファイルがある場合、**スキルファイ�
 - PR description または変更の目的（把握できている場合）
 - spec / cross-aggregate 参照 / API・イベント・公開 contract 変更 / 運用・リリース安全性 / CI・check状態の確認結果
 - 担当する観点の番号と重点確認事項
+- **重点はあくまで「先に見る」であって「だけ見る」ではない。担当観点はすべて独立に確認し、
+  軽量な品質観点（ログ・トレーサビリティ、命名規約、不要な再計算/メモ化、文言）を重い
+  バグ観点の陰で省略しないこと、と必ず伝える**（重点で絞ると本来カバーすべき観点が落ちる）
 - CRITICAL / HIGH / MEDIUM / LOW の分類基準
 - 確信度 80% 未満の推測は Findings に入れず Open Questions に分離すること
 
@@ -244,6 +268,10 @@ SKILL_FILES に1件以上のファイルがある場合、**スキルファイ�
 ### 6. 結果を統合してレポートを出力する
 
 `pr-review` スキルのレポートフォーマットに従い、エージェントと Codex の結果を統合する。
+
+レポートヘッダ直後に**「観点カバレッジ」表**を置き、起動したエージェントとカバー観点、
+および**未起動エージェントの担当観点を「今回未チェック」と明示**する（省略は「カバーした」と
+誤読される）。詳細フォーマットは `pr-review` スキル Step 6 を参照。
 
 `skill-reviewer` の結果がある場合は、通常セクションの後に**「ドメインスキル違反」セクション**として追記する。
 スキルファイルごとに1サブセクション。違反なしのスキルはサブセクションごと省略する。
