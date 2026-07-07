@@ -1,8 +1,5 @@
 ---
 name: qa-workflow
-type: workflow
-mutating: true
-user-invocable: true
 argument-hint: "[テストコマンド or ファイルパス]"
 dependencies:
   - test-runner

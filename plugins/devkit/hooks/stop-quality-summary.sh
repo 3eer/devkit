@@ -30,7 +30,7 @@ SECRETS_MSG=""
 if command -v gitleaks >/dev/null 2>&1; then
   EMPTY_DIR="$(mktemp -d /tmp/devkit-stop-gl-XXXXXX)"
   if ! git diff HEAD 2>/dev/null | gitleaks detect --pipe --source "$EMPTY_DIR" 2>/dev/null; then
-    SECRETS_MSG="- シークレット検出: gitleaks が問題を発見しました。`security-gate-reader` スキルで確認してください。"
+    SECRETS_MSG="- シークレット検出: gitleaks が問題を発見しました。`security-gate` スキルで確認してください。"
   else
     SECRETS_MSG="- シークレット検出: クリーン"
   fi

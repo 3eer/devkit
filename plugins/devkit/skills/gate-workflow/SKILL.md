@@ -1,13 +1,10 @@
 ---
 name: gate-workflow
-type: workflow
-mutating: true
-user-invocable: true
 argument-hint: "[quick|full|report]"
 dependencies:
-  - coding-conventions-reader
-  - security-gate-reader
-  - tech-debt-reader
+  - coding-conventions
+  - security-gate
+  - tech-debt
   - test-runner
   - debt-analyzer
 description: |
@@ -47,7 +44,7 @@ triggers:
 | モード | 内容 |
 |--------|------|
 | `quick` (デフォルト) | lint + secrets check (gitleaks) + 依存関係脆弱性 (trivy/npm audit) + テスト実行 |
-| `full` | quick + **semgrep SAST** + 技術負債スコア（`tech-debt-reader` / `debt-analyzer`） |
+| `full` | quick + **semgrep SAST** + 技術負債スコア（`tech-debt` / `debt-analyzer`） |
 | `report` | full + Markdown レポートファイル生成 |
 
 **SAST (semgrep) は `full` / `report` モードでのみ実行する。** 編集後フックは lint のみ（軽量）。
@@ -56,7 +53,7 @@ triggers:
 
 ### 0. セキュリティ bootstrap の確認（初回または未設定時）
 
-プロジェクトに pre-commit / CI セキュリティ設定がない場合、`security-gate-reader` スキルの「プロジェクトへの展開」に従い雛形をコピーする:
+プロジェクトに pre-commit / CI セキュリティ設定がない場合、`security-gate` スキルの「プロジェクトへの展開」に従い雛形をコピーする:
 
 ```bash
 cp "${CLAUDE_PLUGIN_ROOT}/templates/pre-commit-config.yaml" .pre-commit-config.yaml
@@ -70,7 +67,7 @@ cp "${CLAUDE_PLUGIN_ROOT}/templates/github-workflows-devkit-security.yml" .githu
 
 ### 1. プロジェクト設定を読む
 
-`coding-conventions-reader` スキルに従い linter 設定・CLAUDE.md を読み込む。
+`coding-conventions` スキルに従い linter 設定・CLAUDE.md を読み込む。
 
 ### 2. `test-runner` エージェントを起動する
 

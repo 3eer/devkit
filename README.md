@@ -20,14 +20,14 @@ devkit は Claude Code をハーネス基盤として使用し、品質保証レ
 ┌─────────────────────────────────────────────────────────────┐
 │                         devkit                              │
 │                                                             │
-│  C (Context)    skills/           coding-conventions-reader   │
-│                                   pr-review-reader            │
+│  C (Context)    skills/           coding-conventions   │
+│                                   pr-review            │
 │                                   qa-workflow                 │
 │                                   gate-workflow               │
 │                                   dev-loop-workflow           │
 │                                   implement-to-pr-workflow    │
-│                                   security-gate-reader        │
-│                                   tech-debt-reader            │
+│                                   security-gate        │
+│                                   tech-debt            │
 │                                                             │
 │  T (Tools)      hooks/            pre-write-secrets-check   │
 │                                   post-edit-quality-check   │
@@ -52,11 +52,11 @@ flowchart TD
 
     subgraph devkit["devkit plugin"]
         direction TB
-        S1[coding-conventions-reader] -->|auto-activate| CC
-        S2[pr-review-reader] -->|auto-activate| CC
+        S1[coding-conventions] -->|auto-activate| CC
+        S2[pr-review] -->|auto-activate| CC
         S3[qa-workflow] -->|auto-activate| CC
-        S4[security-gate-reader] -->|auto-activate| CC
-        S5[tech-debt-reader] -->|auto-activate| CC
+        S4[security-gate] -->|auto-activate| CC
+        S5[tech-debt] -->|auto-activate| CC
         S6[dev-loop-workflow] -->|auto-activate| CC
         S7[implement-to-pr-workflow] -->|auto-activate| CC
         S8[gate-workflow] -->|auto-activate| CC
@@ -104,11 +104,11 @@ devkit の入口は **スキルのみ**（slash command は廃止）。自然言
 | `dev-loop-workflow` | 設計→実装→検証→commit→PR→受け入れテスト依頼 | 「設計からPRまで」「フィルタ機能を追加して開発ループで」 |
 | `implement-to-pr-workflow` | 受け入れ条件付き実装→PR（設計済み向け） | 「AC: … を満たして PR まで」「ship it」 |
 | `gate-workflow` | フル品質ゲート（quick / full / report） | 「品質ゲート full」「gate report」 |
-| `pr-review-reader` | PRレビュー・リスク評価 | 「PR 42 をレビューして」「マージ前確認」 |
-| `security-gate-reader` | セキュリティスキャン | 「セキュリティスキャンして」「src/ を scan」 |
+| `pr-review` | PRレビュー・リスク評価 | 「PR 42 をレビューして」「マージ前確認」 |
+| `security-gate` | セキュリティスキャン | 「セキュリティスキャンして」「src/ を scan」 |
 | `qa-workflow` | 自律QAループ（最大5イテレーション） | 「テストが通るまで」「test loop」 |
-| `tech-debt-reader` | 技術負債・ホットスポット | 「技術負債分析」「src/api の hotspot」 |
-| `coding-conventions-reader` | コーディング規約（主に自動起動） | コード生成・実装開始時 |
+| `tech-debt` | 技術負債・ホットスポット | 「技術負債分析」「src/api の hotspot」 |
+| `coding-conventions` | コーディング規約（主に自動起動） | コード生成・実装開始時 |
 
 **Cursor:** スキル md を `Read` し手順に従うか、`Task` で subagent を起動（`dev-loop-workflow` の Harness 表参照）。
 

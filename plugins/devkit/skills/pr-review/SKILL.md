@@ -1,8 +1,5 @@
 ---
-name: pr-review-reader
-type: reader
-mutating: false
-user-invocable: true
+name: pr-review
 argument-hint: "[PR番号 or ブランチ名 or --base <branch>]"
 dependencies:
   - quality-reviewer

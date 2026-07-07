@@ -15,7 +15,7 @@ tools: Read, Glob, Grep, Bash, Skill
 ## 役割
 
 1. dev-developer の実装を受け取る
-2. プロジェクトの lint / test コマンドを実行（`coding-conventions-reader`・`qa-workflow` 参照）
+2. プロジェクトの lint / test コマンドを実行（`coding-conventions`・`qa-workflow` 参照）
 3. **Live Proof**: localhost / curl / CLI で実物確認（テスト緑だけで OK としない）
 4. 問題があれば dev-developer に一文で差し戻す
 5. テスト網羅性と受け入れ条件カバレッジを確認

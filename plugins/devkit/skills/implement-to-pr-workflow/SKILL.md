@@ -1,13 +1,10 @@
 ---
 name: implement-to-pr-workflow
-type: workflow
-mutating: true
-user-invocable: true
 argument-hint: "<タスク内容。受け入れ条件と制約を含める>"
 dependencies:
-  - coding-conventions-reader
+  - coding-conventions
   - qa-workflow
-  - pr-review-reader
+  - pr-review
 writes_to:
   - .
 description: |
@@ -20,7 +17,7 @@ description: |
   every requirement, and turned into a merge-ready PR before asking for the merge decision.
   Triggers on: "ship it", "implement and verify", "PRまで作って", 実装してPRまで,
   検証込みで実装してPR, マージ判断まで, 受け入れ条件を満たしてPRにして, 実装からPR提出まで一気に.
-  テスト修正だけなら qa-workflow を、レビューだけなら pr-review-reader を直接使うこと。
+  テスト修正だけなら qa-workflow を、レビューだけなら pr-review を直接使うこと。
 version: 1.1.0
 tools:
   - Read
@@ -72,7 +69,7 @@ triggers:
 | 操作 | Claude Code | Cursor |
 |------|-------------|--------|
 | サブエージェント | `Agent` → `devkit:requirements-checker` 等 | `Task` → `subagent_type="requirements-checker"` 等 |
-| スキル委譲 | `Skill` → `qa-workflow` / `pr-review-reader` | orchestrator が SKILL.md を `Read` し手順実行 |
+| スキル委譲 | `Skill` → `qa-workflow` / `pr-review` | orchestrator が SKILL.md を `Read` し手順実行 |
 | Live Proof（UI） | browser MCP / Bash | cursor-ide-browser MCP / Bash |
 | Live Proof（API） | Bash `curl` / httpie | 同左 |
 
@@ -116,7 +113,7 @@ triggers:
 
 ## Step 1: 実装
 
-1. `coding-conventions-reader` スキルの手順でプロジェクト規約・lint 設定を読み込む
+1. `coding-conventions` スキルの手順でプロジェクト規約・lint 設定を読み込む
 2. 受け入れ条件を満たす最小の実装を行う（制約の範囲内で）
 3. 受け入れ条件をテストコードに翻訳する（既存テストの流儀に合わせる）
 
@@ -128,11 +125,11 @@ triggers:
 - 失敗テストの削除・skip は禁止（qa-workflow と共通）
 - 5回で収束しなければ、原因分析を書いて**ここで停止**する（Step 3 に進まない）
 
-## Step 3: 敵対的レビュー（pr-review-reader に委譲）
+## Step 3: 敵対的レビュー（pr-review に委譲）
 
-`pr-review-reader` スキルの手順で diff をレビューする。レビューの目的は承認ではなく**問題の発見**
-（pr-review-reader が並列起動する各エージェントは CRITICAL/HIGH/MEDIUM/LOW で報告する）。
-**自分の書いたコードを自分で承認しない**——レビューは pr-review-reader の独立エージェントに行わせる。
+`pr-review` スキルの手順で diff をレビューする。レビューの目的は承認ではなく**問題の発見**
+（pr-review が並列起動する各エージェントは CRITICAL/HIGH/MEDIUM/LOW で報告する）。
+**自分の書いたコードを自分で承認しない**——レビューは pr-review の独立エージェントに行わせる。
 
 指摘の振り分け:
 
@@ -263,7 +260,7 @@ PR: https://github.com/OWNER/REPO/pull/NN   ← canonical な完全URL（#NN 不
 | 失敗モード | 何が起きるか | ガード |
 |-----------|------------|--------|
 | テストの改ざん | 通らないテストを「修正」して緑にする | 禁止事項1行目 + qa-workflow の禁止規定 |
-| 検証の形骸化 | レビューが「LGTM」になる | pr-review-reader の重大度分類・敵対的観点・自己承認の禁止 |
+| 検証の形骸化 | レビューが「LGTM」になる | pr-review の重大度分類・敵対的観点・自己承認の禁止 |
 | **緑だが動かない** | テストは通るが実物は壊れている | **Step 4 Live Proof ゲート（テスト外・実物で実証）** |
 | **実証の省略** | 「自信ある／自明だから」で Live Proof を飛ばす | **Step 4 のゲート規定（waiver 禁止・不可なら停止）** |
 | **要件の取りこぼし** | 受け入れ条件を1個忘れても残りのテストは緑で通る | **Step 5 完了判定ゲート（順方向トレース）** |

@@ -1,8 +1,5 @@
 ---
-name: security-gate-reader
-type: reader
-mutating: false
-user-invocable: true
+name: security-gate
 argument-hint: "[スキャン対象パス or パッケージ名]"
 dependencies:
   - security-auditor

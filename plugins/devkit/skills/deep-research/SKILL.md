@@ -1,8 +1,5 @@
 ---
-name: deep-research-reader
-type: reader
-mutating: false
-user-invocable: true
+name: deep-research
 argument-hint: "<調査トピック> [--mode quick|standard|deep]"
 dependencies:
   - fact-collector

@@ -1,8 +1,5 @@
 ---
-name: coding-conventions-reader
-type: reader
-mutating: false
-user-invocable: false
+name: coding-conventions
 description: |
   Use this skill when starting a new feature, creating files, asking about code style or
   architecture patterns, or when Claude is about to write substantial code. Also activates
@@ -44,7 +41,7 @@ triggers:
 - [ ] 同じ機能の既存実装を `Grep` で検索して重複を避ける
 - [ ] 隣接ファイルを `Read` して命名・スタイルのパターンを確認する
 - [ ] テストが存在するか確認し、ロジック変更時はテストも更新する
-- [ ] 新しい外部ライブラリは `security-gate-reader` スキルで評価する
+- [ ] 新しい外部ライブラリは `security-gate` スキルで評価する
 
 ## 普遍的な原則
 
@@ -100,7 +97,7 @@ linter・typecheck を実行する。フックがエラーを報告したら **�
 | 状況 | 推奨アクション |
 |------|----------------|
 | 新しい抽象化が必要か迷う | 同じパターンが3回以上出現したら検討 |
-| 外部ライブラリを追加 | `security-gate-reader` スキルを通す |
+| 外部ライブラリを追加 | `security-gate` スキルを通す |
 | DBスキーマ変更 | マイグレーションファイルを必ず作成 |
 | API追加 | 型定義・OpenAPIを先に書いてから実装 |
-| 設定ファイル変更 | `pr-review-reader` スキルで高リスク判定 |
+| 設定ファイル変更 | `pr-review` スキルで高リスク判定 |
