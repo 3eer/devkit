@@ -1,13 +1,10 @@
 ---
 name: dev-loop-workflow
-type: workflow
-mutating: true
-user-invocable: true
 argument-hint: "<タスク説明>"
 dependencies:
-  - coding-conventions-reader
+  - coding-conventions
   - qa-workflow
-  - pr-review-reader
+  - pr-review
   - implement-to-pr-workflow
 writes_to:
   - .
@@ -86,7 +83,7 @@ dev-lead の成果物:
 
 1. 確定計画と番号付き AC を `dev-developer` に渡す
 2. 実装中の確認は dev-lead に裁定 → 回答を dev-developer に返す
-3. dev-developer は `coding-conventions-reader` に従う
+3. dev-developer は `coding-conventions` に従う
 
 ## Phase 3: コミット（dev-lead 承認ゲート）
 
@@ -102,9 +99,9 @@ dev-lead の成果物:
 3. Pass 後、`qa-workflow` スキルでテスト→修正ループ（最大5回）
 4. dev-qa が「本人向け受け入れテスト項目」を出力（LLM/UI 等の自動検証不能項目）
 
-## Phase 5: 独立レビュー（pr-review-reader）
+## Phase 5: 独立レビュー（pr-review）
 
-`pr-review-reader` スキルの手順で diff を敵対的レビュー:
+`pr-review` スキルの手順で diff を敵対的レビュー:
 
 | 指摘 | 対応 |
 |------|------|

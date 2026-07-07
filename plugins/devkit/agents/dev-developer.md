@@ -13,7 +13,7 @@ dev-lead の確定計画と受け入れ条件に従い実装する。確認・�
 
 ## 起動時
 
-1. `coding-conventions-reader` スキルの手順でプロジェクト規約・lint 設定を読み込む
+1. `coding-conventions` スキルの手順でプロジェクト規約・lint 設定を読み込む
 2. dev-lead から渡された番号付き受け入れ条件を確認する
 
 ## 役割
@@ -30,7 +30,7 @@ dev-lead の確定計画と受け入れ条件に従い実装する。確認・�
 
 ## コミット（dev-lead 承認後）
 
-1. プロジェクトの lint / format を変更ファイルに対して実行（`coding-conventions-reader` 参照）
+1. プロジェクトの lint / format を変更ファイルに対して実行（`coding-conventions` 参照）
 2. `git status` で意図しないファイルが含まれていないか確認
 3. Conventional Commits 形式のメッセージ案を提示
 4. dev-lead 承認後: `git add`（関連ファイルのみ）→ `git commit`

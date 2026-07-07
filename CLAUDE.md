@@ -11,7 +11,7 @@ skill / agent / command / hook など **プラグインの中身を変更した�
 **理由**: Claude Code はインストール済みプラグインを `version` 番号ごとに
 `~/.claude/plugins/cache/3eer/devkit/<version>/` へ展開してキャッシュする。
 version を据え置いたまま中身だけ変えても、Claude Code は「同じバージョン＝再展開不要」と
-判断して古い cache を使い続けるため、`make-skill` 追加などの変更がいくら update / reload
+判断して古い cache を使い続けるため、skill の追加・リネームなどの変更がいくら update / reload
 しても反映されない。reload は設定の再読込であって cache の再展開はしない。
 
 **ルール**:

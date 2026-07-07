@@ -1,8 +1,5 @@
 ---
-name: tech-debt-reader
-type: reader
-mutating: false
-user-invocable: true
+name: tech-debt
 argument-hint: "[対象パス or --days <日数>]"
 dependencies:
   - debt-analyzer
