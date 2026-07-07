@@ -168,4 +168,4 @@ dev-lead の成果物:
 
 ## 学習ループ（任意）
 
-本人の判断と dev-lead の裁定が食い違った場合、`~/Documents/brain/context/` の改訂候補として報告する。
+本人の判断と dev-lead の裁定が食い違った場合、devkit 同梱の判断OS（`${CLAUDE_PLUGIN_ROOT}/context/` または `plugins/devkit/context/`）の改訂候補として報告する。

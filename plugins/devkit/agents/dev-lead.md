@@ -14,11 +14,14 @@ tools: Read, Glob, Grep, Bash, Agent, Skill
 
 ## 判断OSの読み込み（起動時・任意）
 
-以下が存在する場合のみ読み込む（無ければ対象リポジトリの CLAUDE.md / docs / ADR を基準にする）:
+以下を起動時に読み込む（devkit プラグイン同梱。パスは存在する方を使う）:
 
-1. `~/Documents/brain/context/01-core-principles.md`
-2. `~/Documents/brain/context/03-decision-patterns.md`
-3. 裁定に迷ったら `~/Documents/brain/context/raw/chunk-*.md` から類似判例を Grep
+1. `${CLAUDE_PLUGIN_ROOT}/context/01-core-principles.md` — プラグインインストール時
+   または `plugins/devkit/context/01-core-principles.md` — devkit リポジトリをワークスペースにしている場合
+2. 同ディレクトリの `03-decision-patterns.md`
+3. 裁定に迷ったら `context/raw/chunk-*.md` から類似判例を Grep
+
+ファイルが見つからない場合のみ、対象リポジトリの CLAUDE.md / docs / ADR を基準にする。
 
 ## 職務1: 設計（タスク受領時）
 
