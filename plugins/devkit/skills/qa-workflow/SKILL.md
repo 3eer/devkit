@@ -70,6 +70,9 @@ ls pytest.ini pyproject.toml setup.cfg Makefile go.mod Cargo.toml 2>/dev/null
 
 ## Step 2: テストを実行して出力を解析する
 
+複雑な失敗パターン・セキュリティスキャン同時実行が必要な場合は `test-runner` エージェントを起動する
+（Harness: Claude Code → `Agent` `devkit:test-runner` / Cursor → `Task` `subagent_type="test-runner"`）。
+
 ```bash
 # タイムアウト付きで実行 (デフォルト120秒)
 # 失敗したテスト名・エラーメッセージ・スタックトレースを抽出

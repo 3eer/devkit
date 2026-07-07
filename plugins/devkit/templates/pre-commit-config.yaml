@@ -1,0 +1,28 @@
+# devkit security bootstrap — copy to project root as .pre-commit-config.yaml
+#
+# Install:
+#   pip install pre-commit   # or: brew install pre-commit
+#   pre-commit install
+#   pre-commit run --all-files
+#
+# From devkit plugin root (${CLAUDE_PLUGIN_ROOT}):
+#   cp templates/pre-commit-config.yaml .pre-commit-config.yaml
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+
+  - repo: https://github.com/returntocorp/pre-commit-semgrep
+    rev: v1.136.0
+    hooks:
+      - id: semgrep
+        args: [--config, p/security-audit, --metrics=off]

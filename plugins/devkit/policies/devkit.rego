@@ -1,42 +1,53 @@
 # devkit OPA Policy
-# Run with: conftest test --policy policies/devkit.rego .
+# Run with: conftest test --combine --policy policies/devkit.rego .
 # Requires: https://www.conftest.dev/
+#
+# --combine is required: input is an array of {path, contents} objects.
 
-package devkit
+package main
 
 import future.keywords.if
 import future.keywords.in
 
 # ---------------------------------------------------------------------------
-# Deny list: known problematic npm packages
-# Customize this list for your organization's requirements.
+# Deny list: known problematic npm packages (name-level blocklist).
+# Prefer lockfile + npm audit / OSV for version-level coverage in CI.
+# Customize for your organization.
 # ---------------------------------------------------------------------------
-deny_packages := {
-  "left-pad",       # famous removal incident
-  "event-stream",   # supply chain attack (2018)
-  "ua-parser-js",   # malware injection (2021)
-  "node-ipc",       # malicious update targeting specific regions (2022)
-  "colors",         # maintainer sabotage (2022)
-  "faker",          # maintainer sabotage (2022)
-  "coa",            # account hijack + malware (2021)
-  "rc",             # account hijack + malware (2021)
-  "eslint-scope",   # credentials theft (2018)
-  "crossenv",       # typosquat malware
+blocked_packages := {
+  "left-pad",
+  "event-stream",
+  "crossenv",
+  "eslint-scope",
 }
 
-# Check package.json dependencies
-deny[msg] if {
-  input.file == "package.json"
-  some pkg in object.keys(input.content.dependencies)
-  pkg in deny_packages
-  msg := sprintf("Denied package '%v' found in dependencies", [pkg])
+is_package_json(path) if {
+  endswith(path, "package.json")
 }
 
-deny[msg] if {
-  input.file == "package.json"
-  some pkg in object.keys(input.content.devDependencies)
-  pkg in deny_packages
-  msg := sprintf("Denied package '%v' found in devDependencies", [pkg])
+is_blocked_env_path(path) if {
+  regex.match(`(^|.*/)\.env(\.[a-zA-Z0-9_-]+)?$`, path)
+  not endswith(path, ".example")
+  not endswith(path, ".sample")
+  not endswith(path, ".template")
+}
+
+deny contains msg if {
+  some i
+  is_package_json(input[i].path)
+  deps := object.get(input[i].contents, "dependencies", {})
+  some pkg in object.keys(deps)
+  pkg in blocked_packages
+  msg := sprintf("Denied package '%v' found in %v dependencies", [pkg, input[i].path])
+}
+
+deny contains msg if {
+  some i
+  is_package_json(input[i].path)
+  devdeps := object.get(input[i].contents, "devDependencies", {})
+  some pkg in object.keys(devdeps)
+  pkg in blocked_packages
+  msg := sprintf("Denied package '%v' found in %v devDependencies", [pkg, input[i].path])
 }
 
 # ---------------------------------------------------------------------------
@@ -51,27 +62,27 @@ sensitive_paths := {
   "certs/",
 }
 
-warn[msg] if {
-  some path in sensitive_paths
-  startswith(input.file, path)
-  msg := sprintf("Sensitive path '%v' changed — human review recommended", [input.file])
+warn contains msg if {
+  some i
+  some prefix in sensitive_paths
+  startswith(input[i].path, prefix)
+  msg := sprintf("Sensitive path '%v' changed — human review recommended", [input[i].path])
 }
 
 # ---------------------------------------------------------------------------
-# Deny: .env files must not be committed (allow .env.example / .env.sample / .env.template)
+# Deny: .env files must not be committed
 # ---------------------------------------------------------------------------
-deny[msg] if {
-  regex.match(`^(.*\/)?\.env(\.[a-z]+)?$`, input.file)
-  not endswith(input.file, ".example")
-  not endswith(input.file, ".sample")
-  not endswith(input.file, ".template")
-  msg := sprintf("'.env' file must not be committed: %v (use .env.example instead)", [input.file])
+deny contains msg if {
+  some i
+  is_blocked_env_path(input[i].path)
+  msg := sprintf("'.env' file must not be committed: %v (use .env.example instead)", [input[i].path])
 }
 
 # ---------------------------------------------------------------------------
 # Warn: private key files
 # ---------------------------------------------------------------------------
-warn[msg] if {
-  regex.match(`\.(pem|key|p12|pfx)$`, input.file)
-  msg := sprintf("Private key file detected: %v — ensure this is not a real private key", [input.file])
+warn contains msg if {
+  some i
+  regex.match(`\.(pem|key|p12|pfx)$`, input[i].path)
+  msg := sprintf("Private key file detected: %v — ensure this is not a real private key", [input[i].path])
 }

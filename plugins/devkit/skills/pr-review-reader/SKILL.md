@@ -17,13 +17,14 @@ description: |
   specialist agents based on risk level. Triggers on: "review this PR", "check the diff",
   "is this safe to merge", "before I push", "pre-merge check", "scan this directory",
   PRのレビュー, マージ前確認, push前確認, 変更のリスク評価, コード品質チェック.
-version: 2.1.0
+version: 2.2.0
 tools:
   - Read
   - Bash
   - Glob
   - Grep
   - Agent
+  - Task
 triggers:
   - "review this PR"
   - "check the diff"
@@ -43,6 +44,13 @@ triggers:
 このスキルはレビューの「交通整理役」です。レビュー対象を確定し、diff と周辺仕様を読んでリスクを評価し、
 担当エージェントを選定して並列で起動します。最終出力は「見つかった問題」を先に並べ、
 エージェント名や内部の実行詳細は出しません。
+
+## Harness（Claude Code / Cursor）
+
+| 操作 | Claude Code | Cursor |
+|------|-------------|--------|
+| 専門 subagent 並列起動 | 1 メッセージに複数 `Agent`（`devkit:quality-reviewer` 等） | 1 メッセージに複数 `Task`（`subagent_type="quality-reviewer"` 等） |
+| diff / spec 収集 | `Read` / `Bash` | 同左 |
 
 ---
 
@@ -160,6 +168,30 @@ find . -maxdepth 3 \( \
 見つかったファイルは全て読む。ここで定義された禁止パターン・命名規則・アーキテクチャ制約は
 レビューで HIGH 以上の根拠として使う。
 
+#### ドメインスキルの検出
+
+```bash
+# .claude/skills/ 配下の SKILL.md を列挙する。
+# -L: .claude/skills/ が .agents/skills/ への symlink である構成でもリンク先を辿る。
+find -L . -maxdepth 5 -path "*/.claude/skills/*/SKILL.md" \
+  -not -path "*/node_modules/*" 2>/dev/null | sort
+```
+
+見つかったファイルを **SKILL_FILES** 候補リストとして記録する（内容はまだ読まない）。
+Step 5 で `skill-reviewer` を追加起動する際に使用する。
+
+**SKILL_FILES の選別（候補が多い場合）:**
+
+skill が多数あるリポでは全件を skill-reviewer に回すと並列数が爆発する。
+**diff の変更内容に関連する skill を優先**して最大 8 件まで選ぶ。判断材料:
+
+1. **常に優先**: silent-failure / docs-sync / error-handling / aggregate / race-condition 等、
+   「本番事故・整合性・観測性・ドキュメント同期」に直結する横断 skill
+2. 変更ファイルのパス・ドメイン語と SKILL.md の `description` が一致する skill
+3. 上記で 8 件に満たない場合のみ、残りをアルファベット順で補充
+
+選別後の SKILL_FILES が空になることは避ける（横断 skill は最低限残す）。
+
 ### 2-A: spec / ADR / 設計ドキュメントを探して読む
 
 ```bash
@@ -210,7 +242,7 @@ rg -l "isConfirmed|Source|Status" -g '*.ts' -g '*.tsx' -g '*.py' -g '*.go' | hea
 rg -l "$ENTITY_ID_TYPE" -g '*.ts' -g '*.tsx' -g '*.py' -g '*.go' | head -40
 ```
 
-参照が見つかった場合、その集約への影響（Task/PostingPlan/Post等）を確認する。
+参照が見つかった場合、その集約への影響（関連エンティティ・集約ルート等）を確認する。
 参照されているEntityを削除するコードはHIGH〜CRITICAL扱いとする。
 
 ### 2-D: API・イベント・公開contractの互換性変更（BREAKING change）を検出する
@@ -384,6 +416,57 @@ CI/check が存在しない、または状態不明の場合:
 - 「lint/format/typecheck で機械検出できる問題は報告しないこと」
 - 「報告にエージェント自身の名前を含めないこと。観点カテゴリ・ファイル:行・問題・推奨修正のみ返すこと」
 
+#### ドメインスキルレビュアーの追加起動
+
+SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つの `skill-reviewer` エージェントを追加で並列起動する**。
+
+各 `skill-reviewer` への指示:
+
+```
+あなたはドメイン固有ルール専門レビュアーです。
+
+## あなたのタスク
+以下のスキルファイルに定義されたルール・観点**のみ**を使って、渡された diff をレビューしてください。
+このスキルファイルの外にある観点（型安全・セキュリティ・テスト等）は一切報告しないこと。
+
+## スキルファイル
+[スキルファイルのパスと内容をここに貼り付ける]
+
+## レビュー対象 diff
+[diff をここに貼り付ける]
+
+## 出力ルール
+- CRITICAL / HIGH / MEDIUM / LOW で分類する
+- 確信度 80% 未満の指摘は報告しない
+- diff の変更行またはその直接影響範囲に紐づく問題のみ報告する
+- lint/tsc で検出可能な問題は報告しない
+- 問題がなければ「スキル違反なし」と1行で返す
+
+## フォーマット
+### ドメインスキル違反 — [スキルファイル名]
+
+| # | ファイル:行 | 違反ルール | 問題の要約 | 推奨修正 |
+|---|-----------|----------|----------|--------|
+
+（問題がなければこのセクション全体を省略）
+```
+
+**上限:** SKILL_FILES は Step 2-0 で最大 8 件に絞られている。各 1 件につき 1 つの `skill-reviewer` を起動する。
+
+---
+
+## Step 5b: `/codex:review` を実行する（任意）
+
+エージェントレビューと並行して、Codex プラグインが利用可能なら静的レビューを実行する。
+
+```
+/codex:review
+```
+
+- `--audit` モードの場合は対象パスを引数に渡す: `/codex:review --audit $TARGET`
+- openai-codex プラグイン未導入の場合はスキップし、Step 6 のレポートに「Codex: 未実行（プラグイン未導入）」と明記する
+- Codex のレビュー結果は Step 6 の統合レポートにマージする
+
 ---
 
 ## Step 6: 結果を統合してレポートを生成する
@@ -415,6 +498,9 @@ CI/check が存在しない、または状態不明の場合:
 **未起動エージェントがある場合、その担当観点は「今回未チェック」と 1 行で明記する**
 （例: 「debt-analyzer 未起動のため観点25 パフォーマンス・観点33-38 運用は未チェック」）。
 省略は「カバーした」と誤読される。リスク判定で外したなら、その判断根拠も 1 行添える。
+
+`skill-reviewer` の結果がある場合は、通常セクションの後に**「ドメインスキル違反」セクション**として追記する。
+スキルファイルごとに1サブセクション。違反なしのスキルはサブセクションごと省略する。
 
 ---
 

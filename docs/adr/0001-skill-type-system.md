@@ -138,6 +138,11 @@ devkit の既存コンポーネントを3型で分類すると：
 | `deep-research-reader` skill | `reader` | `orchestrate` | 収集・検証・執筆を並列 agent に委譲。書き込みなし |
 | `make-skill` skill | `command` | `do` | 成果物（SKILL.md）を生成 |
 | `qa-workflow` skill | `workflow` | `orchestrate` | テスト→修正→再テストでコードを変更 |
+| `implement-to-pr-workflow` skill | `workflow` | — | AC ゲート→実装→QA→レビュー→Live Proof→トレース→commit→PR→Decision Brief |
+| `dev-loop-workflow` skill | `workflow` | — | 設計(dev-lead)→実装→commit→QA→レビュー→Live Proof→トレース→PR→受け入れテスト依頼 |
+| `dev-lead` agent | `reader` | — | 設計・裁定・承認。コードは書かない |
+| `dev-developer` agent | `command` | — | dev-lead 計画に従う実装者 |
+| `dev-qa` agent | `reader` | — | 実機検証・差し戻し |
 | `quality-reviewer` agent | `reader` | `evaluate` | 成果物評価専任 |
 | `security-auditor` agent | `reader` | `evaluate` | セキュリティ評価専任 |
 | `ux-reviewer` agent | `reader` | `evaluate` | UX評価専任 |

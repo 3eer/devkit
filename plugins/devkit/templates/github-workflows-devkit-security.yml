@@ -1,0 +1,53 @@
+# devkit security CI — copy to .github/workflows/devkit-security.yml
+#
+# From devkit plugin root (${CLAUDE_PLUGIN_ROOT}):
+#   mkdir -p .github/workflows
+#   cp templates/github-workflows-devkit-security.yml .github/workflows/devkit-security.yml
+
+name: devkit Security
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    name: SAST (semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Semgrep
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/security-audit
+        env:
+          SEMGREP_SEND_METRICS: "off"
+
+  dependencies:
+    name: Dependencies (trivy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"

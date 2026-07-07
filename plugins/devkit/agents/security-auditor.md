@@ -100,7 +100,7 @@ if command -v trivy >/dev/null 2>&1; then
   trivy fs --scanners vuln --severity HIGH,CRITICAL --quiet . 2>&1 | tail -20 || true
 fi
 if command -v semgrep >/dev/null 2>&1; then
-  semgrep scan --config auto --severity ERROR --quiet . 2>&1 | tail -30 || true
+  semgrep scan --config p/security-audit --severity ERROR --metrics=off --quiet . 2>&1 | tail -30 || true
 fi
 if command -v gitleaks >/dev/null 2>&1; then
   gitleaks detect --source . --no-git 2>&1 | tail -20 || true

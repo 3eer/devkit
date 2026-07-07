@@ -2,13 +2,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-6B48FF)](https://claude.ai/code)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/3eer/devkit/releases)
+[![Version](https://img.shields.io/badge/version-2.6.0-blue)](https://github.com/3eer/devkit/releases)
 [![Harness](https://img.shields.io/badge/harness-engineering-orange)](https://github.com/3eer/devkit)
 
 > AI-driven development harness plugin for Claude Code.
 > Quality gates, autonomous QA loops, security scanning, and tech-debt visibility.
 
-Claude Code 向け AI 駆動開発ハーネスプラグイン。コード品質・セキュリティ・技術負債の自動管理を提供します。**グローバル設定を一切変更しないプラグイン内自己完結型**設計です。
+Claude Code 向け AI 駆動開発ハーネスプラグイン。**Claude Code（Agent/Skill）と Cursor（Task/Read）の両方**で workflow を実行できる手順を各スキルに記載しています。
 
 ---
 
@@ -20,23 +20,26 @@ devkit は Claude Code をハーネス基盤として使用し、品質保証レ
 ┌─────────────────────────────────────────────────────────────┐
 │                         devkit                              │
 │                                                             │
-│  C (Context)    skills/           coding-conventions        │
-│                                   pr-review                 │
-│                                   qa-loop                   │
-│                                   security-gate             │
-│                                   tech-debt                 │
+│  C (Context)    skills/           coding-conventions-reader   │
+│                                   pr-review-reader            │
+│                                   qa-workflow                 │
+│                                   dev-loop-workflow           │
+│                                   implement-to-pr-workflow    │
+│                                   security-gate-reader        │
+│                                   tech-debt-reader            │
 │                                                             │
 │  T (Tools)      hooks/            pre-write-secrets-check   │
 │                                   post-edit-quality-check   │
 │                                   post-edit-semgrep         │
 │                                                             │
-│  V (Validation) agents/           quality-reviewer    (review)      │
-│                                   requirements-checker (review)     │
-│                                   test-runner         (QA+sec)      │
-│                                   debt-analyzer       (debt)        │
+│  V (Validation) agents/           dev-lead / dev-developer / dev-qa   │
+│                                   quality-reviewer    (review)        │
+│                                   requirements-checker (review)       │
+│                                   test-runner         (QA+sec)        │
+│                                   debt-analyzer       (debt)          │
 │                                                             │
-│                 commands/         gate   review  scan       │
-│                                   test-loop  debt           │
+│                 commands/         dev-loop  implement-to-pr           │
+│                                   gate  review  scan  test-loop  debt │
 └─────────────────────────────────────────────────────────────┘
          ↕ Claude Code 標準 (E / S / L 層)
 ┌─────────────────────────────────────────────────────────────┐
@@ -52,11 +55,13 @@ flowchart TD
 
     subgraph devkit["devkit plugin"]
         direction TB
-        S1[coding-conventions] -->|auto-activate| CC
-        S2[pr-review] -->|auto-activate| CC
-        S3[qa-loop] -->|auto-activate| CC
-        S4[security-gate] -->|auto-activate| CC
-        S5[tech-debt] -->|auto-activate| CC
+        S1[coding-conventions-reader] -->|auto-activate| CC
+        S2[pr-review-reader] -->|auto-activate| CC
+        S3[qa-workflow] -->|auto-activate| CC
+        S4[security-gate-reader] -->|auto-activate| CC
+        S5[tech-debt-reader] -->|auto-activate| CC
+        S6[dev-loop-workflow] -->|auto-activate| CC
+        S7[implement-to-pr-workflow] -->|auto-activate| CC
 
         H1[pre-write-secrets-check] -->|PreToolUse hook| CC
         H2[post-edit-quality-check] -->|PostToolUse hook| CC
@@ -96,6 +101,8 @@ flowchart TD
 
 | コマンド | 説明 | Example |
 |---------|------|---------|
+| `/devkit:dev-loop <task>` | 設計→実装→検証→commit→PR→受け入れテスト依頼 | `/devkit:dev-loop フィルタ機能を追加` |
+| `/devkit:implement-to-pr <AC>` | 受け入れ条件付き実装→PR（設計済み向け） | `/devkit:implement-to-pr AC: ...` |
 | `/devkit:gate [quick\|full\|report]` | フル品質ゲート | `/devkit:gate full` |
 | `/devkit:review [PR番号\|ブランチ]` | PRレビュー・リスク評価 | `/devkit:review 42` |
 | `/devkit:scan [path]` | セキュリティスキャン | `/devkit:scan src/` |
@@ -233,12 +240,13 @@ const apiKey = "sk-xxxxxxxxxxxxxxxxxxxx";
 
 | スキル | トリガー |
 |--------|---------|
-| `coding-conventions` | コード生成・スタイル確認・実装開始時 |
-| `pr-review` | PRレビュー・マージ前確認・diff評価 |
-| `qa-loop` | テスト実行・失敗修正・TDD |
-| `security-gate` | 依存関係追加・認証実装・セキュリティ確認 |
-| `tech-debt` | 技術負債・ホットスポット・リファクタ候補確認 |
-| `implement-to-pr-workflow` | 「実装してPRまで」「マージ判断まで」— 実装→テストループ→敵対的レビュー→Live Proof（実物実証）→全要件トレース→PR作成→マージ判断の提出を1依頼で完結。AI はマージせず人間に二択を渡す（`/devkit:implement-to-pr-workflow` で明示起動も可） |
+| `coding-conventions-reader` | コード生成・スタイル確認・実装開始時 |
+| `pr-review-reader` | PRレビュー・マージ前確認・diff評価 |
+| `qa-workflow` | テスト実行・失敗修正・TDD |
+| `security-gate-reader` | 依存関係追加・認証実装・セキュリティ確認 |
+| `tech-debt-reader` | 技術負債・ホットスポット・リファクタ候補確認 |
+| `dev-loop-workflow` | 「設計からPRまで」「開発ループ」— dev-lead 常駐で設計→実装→commit→QA→レビュー→PR→受け入れテスト依頼 |
+| `implement-to-pr-workflow` | 「実装してPRまで」「マージ判断まで」— AC 確定済みの実装→テスト→レビュー→Live Proof→commit→PR（`/devkit:implement-to-pr` で明示起動も可） |
 
 ---
 
@@ -246,6 +254,9 @@ const apiKey = "sk-xxxxxxxxxxxxxxxxxxxx";
 
 | エージェント | 役割 | ツール |
 |------------|------|--------|
+| `dev-lead` | 設計・裁定・承認ゲート（dev-loop 常駐） | Read, Glob, Grep, Bash, Agent, Skill |
+| `dev-developer` | dev-lead 計画に従う実装者 | Read, Write, Edit, Glob, Grep, Bash, Skill |
+| `dev-qa` | 実機検証・差し戻し | Read, Glob, Grep, Bash, Skill |
 | `quality-reviewer` | コードレビュー専任（正確性・信頼性・テスト品質） | Read, Glob, Grep |
 | `requirements-checker` | 要件充足専任（仕様書自動探索・AC照合・実装漏れ/過剰検出） | Read, Glob, Grep |
 | `security-auditor` | PRレビュー時のセキュリティ監査専任（Red Team・OWASP） | Read, Bash, Glob, Grep |
