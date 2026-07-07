@@ -25,7 +25,6 @@ devkit は Claude Code をハーネス基盤として使用し、品質保証レ
 │                                   qa-workflow                 │
 │                                   gate-workflow               │
 │                                   dev-loop-workflow           │
-│                                   implement-to-pr-workflow    │
 │                                   security-gate        │
 │                                   tech-debt            │
 │                                                             │
@@ -58,8 +57,7 @@ flowchart TD
         S4[security-gate] -->|auto-activate| CC
         S5[tech-debt] -->|auto-activate| CC
         S6[dev-loop-workflow] -->|auto-activate| CC
-        S7[implement-to-pr-workflow] -->|auto-activate| CC
-        S8[gate-workflow] -->|auto-activate| CC
+        S7[gate-workflow] -->|auto-activate| CC
 
         H1[pre-write-secrets-check] -->|PreToolUse hook| CC
         H2[post-edit-quality-check] -->|PostToolUse hook| CC
@@ -101,8 +99,7 @@ devkit の入口は **スキルのみ**（slash command は廃止）。自然言
 
 | スキル | 説明 | 起動例 |
 |--------|------|--------|
-| `dev-loop-workflow` | 設計→実装→検証→commit→PR→受け入れテスト依頼 | 「設計からPRまで」「フィルタ機能を追加して開発ループで」 |
-| `implement-to-pr-workflow` | 受け入れ条件付き実装→PR（設計済み向け） | 「AC: … を満たして PR まで」「ship it」 |
+| `dev-loop-workflow` | 設計→実装→検証→commit→PR→受け入れテスト依頼。AC確定済みの実装-only依頼も軽量パスで対応 | 「設計からPRまで」「ship it」「AC: … を満たして PR まで」 |
 | `gate-workflow` | フル品質ゲート（quick / full / report） | 「品質ゲート full」「gate report」 |
 | `pr-review` | PRレビュー・リスク評価 | 「PR 42 をレビューして」「マージ前確認」 |
 | `security-gate` | セキュリティスキャン | 「セキュリティスキャンして」「src/ を scan」 |
