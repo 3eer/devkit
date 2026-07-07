@@ -1,12 +1,44 @@
 ---
-description: Run the full devkit quality gate on the current project
+name: gate-workflow
+type: workflow
+mutating: true
+user-invocable: true
 argument-hint: "[quick|full|report]"
-allowed-tools: Read, Bash, Glob, Grep, Agent
+dependencies:
+  - coding-conventions-reader
+  - security-gate-reader
+  - tech-debt-reader
+  - test-runner
+  - debt-analyzer
+description: |
+  Run the full devkit quality gate on the current project — lint, secrets, dependency
+  vulnerabilities, tests, optional SAST and tech-debt score, optional Markdown report.
+  Triggers on: "quality gate", "run the gate", "gate full", "gate quick", "gate report",
+  品質ゲート, ゲート実行, フル品質チェック, 品質チェック full.
+version: 1.0.0
+tools:
+  - Read
+  - Bash
+  - Glob
+  - Grep
+  - Agent
+  - Skill
+  - Task
+triggers:
+  - "quality gate"
+  - "run the gate"
+  - "gate full"
+  - "gate quick"
+  - "gate report"
+  - 品質ゲート
+  - ゲート実行
+  - フル品質チェック
+  - 品質チェック
 ---
 
 # Gate — Full Quality Gate
 
-引数: `$ARGUMENTS`
+引数: `$ARGUMENTS`（省略時 `quick`）
 
 モードに応じて devkit の品質ゲートを実行する。
 
@@ -15,7 +47,7 @@ allowed-tools: Read, Bash, Glob, Grep, Agent
 | モード | 内容 |
 |--------|------|
 | `quick` (デフォルト) | lint + secrets check (gitleaks) + 依存関係脆弱性 (trivy/npm audit) + テスト実行 |
-| `full` | quick + **semgrep SAST** + 技術負債スコア（`tech-debt-reader`） |
+| `full` | quick + **semgrep SAST** + 技術負債スコア（`tech-debt-reader` / `debt-analyzer`） |
 | `report` | full + Markdown レポートファイル生成 |
 
 **SAST (semgrep) は `full` / `report` モードでのみ実行する。** 編集後フックは lint のみ（軽量）。
@@ -27,11 +59,9 @@ allowed-tools: Read, Bash, Glob, Grep, Agent
 プロジェクトに pre-commit / CI セキュリティ設定がない場合、`security-gate-reader` スキルの「プロジェクトへの展開」に従い雛形をコピーする:
 
 ```bash
-# pre-commit（コミット境界の secrets / SAST）
 cp "${CLAUDE_PLUGIN_ROOT}/templates/pre-commit-config.yaml" .pre-commit-config.yaml
 pip install pre-commit && pre-commit install
 
-# GitHub Actions（push/PR 境界の保証層）
 mkdir -p .github/workflows
 cp "${CLAUDE_PLUGIN_ROOT}/templates/github-workflows-devkit-security.yml" .github/workflows/devkit-security.yml
 ```
@@ -60,5 +90,3 @@ cp "${CLAUDE_PLUGIN_ROOT}/templates/github-workflows-devkit-security.yml" .githu
 ### 5. レポート生成（report のみ）
 
 `devkit-report-[YYYY-MM-DD].md` を生成する。
-
-引数が指定されない場合は `quick` モードで実行する。

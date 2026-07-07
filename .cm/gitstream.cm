@@ -52,10 +52,7 @@ automations:
           comment: |
             **devkit** 中リスク変更が検出されました。AIレビューを推奨します。
 
-            Claude Code で以下を実行してください:
-            ```
-            /devkit:review
-            ```
+            Claude Code / Cursor で `pr-review-reader` スキルを実行してください（例: 「PR をレビューして」）。
 
   # -----------------------------------------------------------------------
   # High risk: infra / migrations / secrets / prod config → require human review
@@ -81,10 +78,7 @@ automations:
           comment: |
             **devkit** ⚠️ 高リスク変更が含まれています。**人間のレビューが必須です。**
 
-            セキュリティスキャンも実行してください:
-            ```
-            /devkit:scan
-            ```
+            `security-gate-reader` スキルも実行してください（例: 「セキュリティスキャンして」）。
 
             変更を承認する前に以下を確認してください:
             - [ ] 機密パス変更の意図は正しいか
