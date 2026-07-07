@@ -1,6 +1,6 @@
 ---
 name: test-runner
-description: QA and test execution specialist. Invoke when you need to run tests, analyze test failures, or interpret test output. Also runs security scans (gitleaks, semgrep, trivy) as part of the gate command. Can run shell commands to execute test suites. Pass the project root path, GATE_MODE (quick|full), and what needs to be tested.
+description: QA and test execution specialist. Invoke when you need to run tests, analyze test failures, or interpret test output. Also runs security scans (gitleaks, semgrep, trivy) as part of gate-workflow. Can run shell commands to execute test suites. Pass the project root path, GATE_MODE (quick|full), and what needs to be tested.
 model: sonnet
 tools: Read, Bash, Glob, Grep
 ---

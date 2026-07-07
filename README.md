@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-6B48FF)](https://claude.ai/code)
-[![Version](https://img.shields.io/badge/version-2.6.0-blue)](https://github.com/3eer/devkit/releases)
+[![Version](https://img.shields.io/badge/version-2.7.0-blue)](https://github.com/3eer/devkit/releases)
 [![Harness](https://img.shields.io/badge/harness-engineering-orange)](https://github.com/3eer/devkit)
 
 > AI-driven development harness plugin for Claude Code.
@@ -23,6 +23,7 @@ devkit は Claude Code をハーネス基盤として使用し、品質保証レ
 │  C (Context)    skills/           coding-conventions-reader   │
 │                                   pr-review-reader            │
 │                                   qa-workflow                 │
+│                                   gate-workflow               │
 │                                   dev-loop-workflow           │
 │                                   implement-to-pr-workflow    │
 │                                   security-gate-reader        │
@@ -30,16 +31,12 @@ devkit は Claude Code をハーネス基盤として使用し、品質保証レ
 │                                                             │
 │  T (Tools)      hooks/            pre-write-secrets-check   │
 │                                   post-edit-quality-check   │
-│                                   post-edit-semgrep         │
 │                                                             │
 │  V (Validation) agents/           dev-lead / dev-developer / dev-qa   │
 │                                   quality-reviewer    (review)        │
 │                                   requirements-checker (review)       │
 │                                   test-runner         (QA+sec)        │
 │                                   debt-analyzer       (debt)          │
-│                                                             │
-│                 commands/         dev-loop  implement-to-pr           │
-│                                   gate  review  scan  test-loop  debt │
 └─────────────────────────────────────────────────────────────┘
          ↕ Claude Code 標準 (E / S / L 層)
 ┌─────────────────────────────────────────────────────────────┐
@@ -62,6 +59,7 @@ flowchart TD
         S5[tech-debt-reader] -->|auto-activate| CC
         S6[dev-loop-workflow] -->|auto-activate| CC
         S7[implement-to-pr-workflow] -->|auto-activate| CC
+        S8[gate-workflow] -->|auto-activate| CC
 
         H1[pre-write-secrets-check] -->|PreToolUse hook| CC
         H2[post-edit-quality-check] -->|PostToolUse hook| CC
@@ -97,17 +95,22 @@ flowchart TD
 
 ---
 
-## Commands / コマンド
+## Skills / スキル
 
-| コマンド | 説明 | Example |
-|---------|------|---------|
-| `/devkit:dev-loop <task>` | 設計→実装→検証→commit→PR→受け入れテスト依頼 | `/devkit:dev-loop フィルタ機能を追加` |
-| `/devkit:implement-to-pr <AC>` | 受け入れ条件付き実装→PR（設計済み向け） | `/devkit:implement-to-pr AC: ...` |
-| `/devkit:gate [quick\|full\|report]` | フル品質ゲート | `/devkit:gate full` |
-| `/devkit:review [PR番号\|ブランチ]` | PRレビュー・リスク評価 | `/devkit:review 42` |
-| `/devkit:scan [path]` | セキュリティスキャン | `/devkit:scan src/` |
-| `/devkit:test-loop [test-cmd]` | 自律QAループ (最大5イテレーション) | `/devkit:test-loop` |
-| `/devkit:debt [path]` | 技術負債分析・ホットスポットレポート | `/devkit:debt src/api` |
+devkit の入口は **スキルのみ**（slash command は廃止）。自然言語・スキル attach・各 SKILL.md の triggers で起動する。
+
+| スキル | 説明 | 起動例 |
+|--------|------|--------|
+| `dev-loop-workflow` | 設計→実装→検証→commit→PR→受け入れテスト依頼 | 「設計からPRまで」「フィルタ機能を追加して開発ループで」 |
+| `implement-to-pr-workflow` | 受け入れ条件付き実装→PR（設計済み向け） | 「AC: … を満たして PR まで」「ship it」 |
+| `gate-workflow` | フル品質ゲート（quick / full / report） | 「品質ゲート full」「gate report」 |
+| `pr-review-reader` | PRレビュー・リスク評価 | 「PR 42 をレビューして」「マージ前確認」 |
+| `security-gate-reader` | セキュリティスキャン | 「セキュリティスキャンして」「src/ を scan」 |
+| `qa-workflow` | 自律QAループ（最大5イテレーション） | 「テストが通るまで」「test loop」 |
+| `tech-debt-reader` | 技術負債・ホットスポット | 「技術負債分析」「src/api の hotspot」 |
+| `coding-conventions-reader` | コーディング規約（主に自動起動） | コード生成・実装開始時 |
+
+**Cursor:** スキル md を `Read` し手順に従うか、`Task` で subagent を起動（`dev-loop-workflow` の Harness 表参照）。
 
 ---
 
@@ -116,7 +119,7 @@ flowchart TD
 ### フル品質チェックを走らせる
 
 ```
-/devkit:gate full
+品質ゲート full を実行して
 ```
 
 ```
@@ -144,7 +147,7 @@ flowchart TD
 ### PRをマージ前にレビューする
 
 ```
-/devkit:review 42
+PR 42 をレビューして
 ```
 
 ```
@@ -167,7 +170,7 @@ flowchart TD
 ### テストが通るまで自動修正させる
 
 ```
-/devkit:test-loop
+テストが通るまで修正して
 ```
 
 ```
@@ -193,7 +196,7 @@ QA Loop — イテレーション 2/5
 ### 技術負債のホットスポットを特定する
 
 ```
-/devkit:debt src/
+src/ の技術負債を分析して
 ```
 
 ```
@@ -234,22 +237,6 @@ const apiKey = "sk-xxxxxxxxxxxxxxxxxxxx";
 
 ---
 
-## Skills (自動起動) / スキル
-
-以下のスキルは関連するプロンプトで **自動的に** 有効になります:
-
-| スキル | トリガー |
-|--------|---------|
-| `coding-conventions-reader` | コード生成・スタイル確認・実装開始時 |
-| `pr-review-reader` | PRレビュー・マージ前確認・diff評価 |
-| `qa-workflow` | テスト実行・失敗修正・TDD |
-| `security-gate-reader` | 依存関係追加・認証実装・セキュリティ確認 |
-| `tech-debt-reader` | 技術負債・ホットスポット・リファクタ候補確認 |
-| `dev-loop-workflow` | 「設計からPRまで」「開発ループ」— dev-lead 常駐で設計→実装→commit→QA→レビュー→PR→受け入れテスト依頼 |
-| `implement-to-pr-workflow` | 「実装してPRまで」「マージ判断まで」— AC 確定済みの実装→テスト→レビュー→Live Proof→commit→PR（`/devkit:implement-to-pr` で明示起動も可） |
-
----
-
 ## Agents / エージェント
 
 | エージェント | 役割 | ツール |
@@ -261,7 +248,7 @@ const apiKey = "sk-xxxxxxxxxxxxxxxxxxxx";
 | `requirements-checker` | 要件充足専任（仕様書自動探索・AC照合・実装漏れ/過剰検出） | Read, Glob, Grep |
 | `security-auditor` | PRレビュー時のセキュリティ監査専任（Red Team・OWASP） | Read, Bash, Glob, Grep |
 | `type-checker` | 型安全性・インターフェース設計専任 | Read, Glob, Grep |
-| `test-runner` | QA・テスト実行専任（gate コマンド時のセキュリティスキャンも担当） | Read, Bash, Glob, Grep |
+| `test-runner` | QA・テスト実行専任（gate-workflow 時のセキュリティスキャンも担当） | Read, Bash, Glob, Grep |
 | `debt-analyzer` | 技術負債・アーキテクチャ分析専任 | Read, Glob, Grep |
 | `ux-reviewer` | UX整合性・アクセシビリティ専任（UI変更PRで自動追加） | Read, Glob, Grep |
 | `fact-collector` | Deep Research 用情報収集専任 | Read, WebSearch, WebFetch |
@@ -272,13 +259,14 @@ const apiKey = "sk-xxxxxxxxxxxxxxxxxxxx";
 
 ## Hooks (自動フック)
 
-インストール後、**グローバル設定を変更せず**に以下が自動で有効になります。PostToolUse フックは `post-edit-quality-check` → `post-edit-semgrep` の順で実行されます:
+インストール後、**グローバル設定を変更せず**に以下が自動で有効になります:
 
 | タイミング | フック | 内容 |
 |-----------|--------|------|
+| Read 前 | `pre-read-env-block` | `.env` 等の機密パス読み取りブロック |
 | Write/Edit 前 | `pre-write-secrets-check` | シークレット検出 (gitleaks 優先 → regex fallback) |
-| Write/Edit 後 | `post-edit-quality-check` | 言語別 lint / typecheck (TS / Python / Go / Rust + clippy) |
-| Write/Edit 後 | `post-edit-semgrep` | SAST スキャン (semgrep インストール済みの場合のみ) |
+| Bash 前 | `pre-bash-deny-commands` | force push / main push / rm -rf 等の拒否 |
+| Write/Edit 後 | `post-edit-quality-check` | 言語別 lint / typecheck (TS / Python / Go / Rust) |
 | セッション終了時 | `stop-quality-summary` | 変更ファイルがある場合のみ簡易サマリーを表示 |
 
 ---
