@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-6B48FF)](https://claude.ai/code)
-[![Version](https://img.shields.io/badge/version-2.7.0-blue)](https://github.com/3eer/devkit/releases)
+[![Version](https://img.shields.io/badge/version-2.9.1-blue)](https://github.com/3eer/devkit/releases)
 [![Harness](https://img.shields.io/badge/harness-engineering-orange)](https://github.com/3eer/devkit)
 
 > AI-driven development harness plugin for Claude Code.
@@ -21,7 +21,7 @@ devkit は Claude Code をハーネス基盤として使用し、品質保証レ
 │                         devkit                              │
 │                                                             │
 │  C (Context)    skills/           coding-conventions   │
-│                                   pr-review            │
+│                                   review            │
 │                                   qa-workflow                 │
 │                                   gate-workflow               │
 │                                   dev-loop-workflow           │
@@ -52,7 +52,7 @@ flowchart TD
     subgraph devkit["devkit plugin"]
         direction TB
         S1[coding-conventions] -->|auto-activate| CC
-        S2[pr-review] -->|auto-activate| CC
+        S2[review] -->|auto-activate| CC
         S3[qa-workflow] -->|auto-activate| CC
         S4[security-gate] -->|auto-activate| CC
         S5[tech-debt] -->|auto-activate| CC
@@ -101,7 +101,7 @@ devkit の入口は **スキルのみ**（slash command は廃止）。自然言
 |--------|------|--------|
 | `dev-loop-workflow` | 設計→実装→検証→commit→PR→受け入れテスト依頼。AC確定済みの実装-only依頼も軽量パスで対応 | 「設計からPRまで」「ship it」「AC: … を満たして PR まで」 |
 | `gate-workflow` | フル品質ゲート（quick / full / report） | 「品質ゲート full」「gate report」 |
-| `pr-review` | PRレビュー・リスク評価 | 「PR 42 をレビューして」「マージ前確認」 |
+| `review` | コードレビュー・リスク評価（PR / ローカル diff / 監査） | 「PR 42 をレビューして」「push 前に自己レビュー」 |
 | `security-gate` | セキュリティスキャン | 「セキュリティスキャンして」「src/ を scan」 |
 | `qa-workflow` | 自律QAループ（最大5イテレーション） | 「テストが通るまで」「test loop」 |
 | `tech-debt` | 技術負債・ホットスポット | 「技術負債分析」「src/api の hotspot」 |

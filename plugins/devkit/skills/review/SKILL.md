@@ -1,5 +1,5 @@
 ---
-name: pr-review
+name: review
 argument-hint: "[PR番号 or ブランチ名 or --base <branch>]"
 dependencies:
   - quality-reviewer
@@ -14,7 +14,7 @@ description: |
   specialist agents based on risk level. Triggers on: "review this PR", "check the diff",
   "is this safe to merge", "before I push", "pre-merge check", "scan this directory",
   PRのレビュー, マージ前確認, push前確認, 変更のリスク評価, コード品質チェック.
-version: 2.2.0
+version: 2.3.0
 tools:
   - Read
   - Bash
@@ -36,7 +36,7 @@ triggers:
   - コード品質チェック
 ---
 
-# PR Review — 40観点・専門エージェント並列オーケストレーション
+# Review — 40観点・専門エージェント並列オーケストレーション
 
 このスキルはレビューの「交通整理役」です。レビュー対象を確定し、diff と周辺仕様を読んでリスクを評価し、
 担当エージェントを選定して並列で起動します。最終出力は「見つかった問題」を先に並べ、
@@ -471,7 +471,7 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 各エージェントのレポートを以下の構造にまとめる:
 
 ```markdown
-## PR Review Report — [PR番号 or ブランチ名 or 監査対象]
+## Review Report — [PR番号 or ブランチ名 or 監査対象]
 
 **日時:** [YYYY-MM-DD]
 **対象:** [変更ファイル数] ファイル (+[追加行] / -[削除行])

@@ -52,7 +52,7 @@ automations:
           comment: |
             **devkit** 中リスク変更が検出されました。AIレビューを推奨します。
 
-            Claude Code / Cursor で `pr-review` スキルを実行してください（例: 「PR をレビューして」）。
+            Claude Code / Cursor で `review` スキルを実行してください（例: 「PR をレビューして」）。
 
   # -----------------------------------------------------------------------
   # High risk: infra / migrations / secrets / prod config → require human review

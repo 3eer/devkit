@@ -4,7 +4,7 @@ argument-hint: "<タスク説明>"
 dependencies:
   - coding-conventions
   - qa-workflow
-  - pr-review
+  - review
 writes_to:
   - .
 description: |
@@ -117,9 +117,9 @@ dev-lead の成果物:
 3. Pass 後、`qa-workflow` スキルでテスト→修正ループ（最大5回）
 4. dev-qa が「本人向け受け入れテスト項目」を出力（LLM/UI 等の自動検証不能項目）
 
-## Phase 5: 独立レビュー（pr-review）
+## Phase 5: 独立レビュー（review）
 
-`pr-review` スキルの手順で diff を敵対的レビュー:
+`review` スキルの手順で diff を敵対的レビュー:
 
 | 指摘 | 対応 |
 |------|------|
