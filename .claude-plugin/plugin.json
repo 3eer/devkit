@@ -1,6 +1,6 @@
 {
   "name": "devkit",
-  "version": "2.9.1",
+  "version": "2.10.0",
   "description": "AI-driven development harness for Claude Code. Quality gates, autonomous QA loops, security scanning, and tech-debt visibility — built for the 3eer workflow.",
   "author": {
     "name": "3eer",

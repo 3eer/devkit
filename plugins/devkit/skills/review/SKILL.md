@@ -1,6 +1,6 @@
 ---
 name: review
-argument-hint: "[PR番号 or ブランチ名 or --base <branch>]"
+argument-hint: "[PR番号 or ブランチ名 or --base <branch>] [--fix]"
 dependencies:
   - quality-reviewer
   - requirements-checker
@@ -11,10 +11,12 @@ dependencies:
 description: |
   Use this skill when reviewing a pull request, self-reviewing before push, scanning existing
   code for quality, or when Claude has finished implementing a feature. Orchestrates parallel
-  specialist agents based on risk level. Triggers on: "review this PR", "check the diff",
-  "is this safe to merge", "before I push", "pre-merge check", "scan this directory",
+  specialist agents based on risk level, adversarially verifies each finding with independent
+  refuter agents, and optionally applies confirmed fixes with --fix. Triggers on:
+  "review this PR", "check the diff", "is this safe to merge", "before I push",
+  "pre-merge check", "scan this directory",
   PRのレビュー, マージ前確認, push前確認, 変更のリスク評価, コード品質チェック.
-version: 2.3.0
+version: 2.4.0
 tools:
   - Read
   - Bash
@@ -39,8 +41,10 @@ triggers:
 # Review — 40観点・専門エージェント並列オーケストレーション
 
 このスキルはレビューの「交通整理役」です。レビュー対象を確定し、diff と周辺仕様を読んでリスクを評価し、
-担当エージェントを選定して並列で起動します。最終出力は「見つかった問題」を先に並べ、
-エージェント名や内部の実行詳細は出しません。
+担当エージェントを選定して並列で起動します。エージェントが出した指摘は Step 5c の**反証パス**
+（指摘ごとに独立の反証エージェントを立てて REFUTED を落とす）を通してからレポートします。
+最終出力は「見つかった問題」を先に並べ、エージェント名や内部の実行詳細は出しません。
+`--fix` が指定された場合のみ、レポート後に CONFIRMED の指摘を working tree に適用します（Step 8）。
 
 ## Harness（Claude Code / Cursor）
 
@@ -410,8 +414,12 @@ CI/check が存在しない、または状態不明の場合:
 - 「各問題を CRITICAL / HIGH / MEDIUM / LOW で分類して報告すること」
 - 「CRITICAL の基準: spec/設計との乖離、データ破壊・消失リスク、認証認可バイパス、silent failure でユーザーが気づけない不整合」
 - 「確信度 80% 未満の推測は Findings に入れず、必要なら Open Questions に回すこと」
+- **「各 Finding に failure_scenario（= どの入力・状態で何が壊れるかの具体的シナリオ、1〜2文）を
+  必ず含めること。『この入力/状態のとき → この誤動作/クラッシュ/不整合が起きる』の形で書く。
+  failure_scenario が書けない指摘は Findings ではなく Open Questions に回すこと」**
+  （抽象的な「〜の可能性がある」だけの指摘を排除し、Step 5c の反証パスで検証可能な形に揃える）
 - 「lint/format/typecheck で機械検出できる問題は報告しないこと」
-- 「報告にエージェント自身の名前を含めないこと。観点カテゴリ・ファイル:行・問題・推奨修正のみ返すこと」
+- 「報告にエージェント自身の名前を含めないこと。観点カテゴリ・ファイル:行・問題・failure_scenario・推奨修正のみ返すこと」
 
 #### ドメインスキルレビュアーの追加起動
 
@@ -435,6 +443,7 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 ## 出力ルール
 - CRITICAL / HIGH / MEDIUM / LOW で分類する
 - 確信度 80% 未満の指摘は報告しない
+- 「問題の要約」には failure_scenario（どの入力・状態で何が壊れるか）を含める。書けない指摘は報告しない
 - diff の変更行またはその直接影響範囲に紐づく問題のみ報告する
 - lint/tsc で検出可能な問題は報告しない
 - 問題がなければ「スキル違反なし」と1行で返す
@@ -462,7 +471,68 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 
 - `--audit` モードの場合は対象パスを引数に渡す: `/codex:review --audit $TARGET`
 - openai-codex プラグイン未導入の場合はスキップし、Step 6 のレポートに「Codex: 未実行（プラグイン未導入）」と明記する
-- Codex のレビュー結果は Step 6 の統合レポートにマージする
+- Codex のレビュー結果は Step 5c の反証パスに他の Findings と同列で入れる
+
+---
+
+## Step 5c: 反証パス — 指摘ごとに独立エージェントで検証する（必須）
+
+エージェントの自己申告確信度（Step 5 の「80% 未満は報告しない」）は self-assessment であり、
+plausible-but-wrong な指摘（もっともらしいが実際には防御コードが既にある・到達不能・仕様通り）を
+落とせない。**全 Finding を、発見エージェントとは別の独立エージェントに「反証」させてから**
+レポートに載せる。
+
+### 手順
+
+1. **プール & 重複統合**: 全エージェント（specialist / skill-reviewer / Codex）の Findings を集め、
+   同一 `(ファイル, 行)` を指す指摘をマージする（複数エージェントが同じ箇所を指摘した事実は
+   詳細説明に残す）。
+2. **検証対象の選定**: 統合後の全 Finding が対象。ただし並列数の上限として **12 件** を超える場合は
+   CRITICAL → HIGH → MEDIUM → LOW の順に 12 件まで検証し、**検証しなかった Finding は verdict を
+   `UNVERIFIED` としてレポートに残す**（黙って落とさない）。
+3. **反証エージェントの並列起動**: Finding 1 件につき 1 つ、read-only の検証エージェントを
+   1 メッセージで並列起動する（Claude Code は `Agent`、Cursor は `Task`。専門 agent ではなく
+   汎用 read-only agent でよい）。
+
+### 各反証エージェントへの指示（verbatim で使う）
+
+```
+あなたはコードレビュー指摘の反証専門家です。以下の指摘を「間違いである」と証明することを試みてください。
+
+## 指摘
+- ファイル:行: [file:line]
+- 問題の要約: [summary]
+- failure_scenario: [どの入力・状態で何が壊れるか]
+
+## レビュー対象 diff（関連部分）
+[該当ハンクを貼り付ける]
+
+## あなたのタスク
+1. 対象ファイルを実際に Read し、diff だけでは見えない周辺コード（呼び出し元・ガード節・
+   型定義・テスト）を確認する
+2. failure_scenario が本当に到達可能か、コードパスを追って検証する
+3. 以下のいずれかの反証根拠を探す:
+   - 既に防御コード・バリデーション・型制約が存在する
+   - failure_scenario の入力・状態が実際には発生し得ない（呼び出し元で保証済み等）
+   - 指摘は diff 以前から存在する pre-existing な問題である
+   - 意図的な仕様である（コメント・spec・テストが裏付けている）
+
+## 出力（この形式のみ）
+- verdict: CONFIRMED（反証できなかった、実在する問題）/ PLAUSIBLE（反証も確認もできなかった）/ REFUTED（反証できた）
+- 根拠: 実際に読んだファイル:行を引用して 1〜3 文
+```
+
+### 判定の扱い
+
+| verdict | 扱い |
+|---|---|
+| CONFIRMED | レポートに載せる（verdict 列に明記） |
+| PLAUSIBLE | レポートに載せる（verdict 列に明記。`--fix` の適用対象外） |
+| REFUTED | Findings から除外する。除外した件数と代表例を「観点カバレッジ」の直後に 1 行で報告する（無音で消さない） |
+| UNVERIFIED | レポートに載せる（検証枠 12 件から溢れた旨を明記） |
+
+**severity の格上げ・格下げはしない。** 反証パスの責務は「実在するか」の判定のみで、
+重要度の再評価は Step 6 の統合時に行う。
 
 ---
 
@@ -496,6 +566,8 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 （例: 「debt-analyzer 未起動のため観点25 パフォーマンス・観点33-38 運用は未チェック」）。
 省略は「カバーした」と誤読される。リスク判定で外したなら、その判断根拠も 1 行添える。
 
+**反証パス:** [検証 N 件 / REFUTED 除外 M 件（代表例: ...）/ UNVERIFIED K 件]
+
 `skill-reviewer` の結果がある場合は、通常セクションの後に**「ドメインスキル違反」セクション**として追記する。
 スキルファイルごとに1サブセクション。違反なしのスキルはサブセクションごと省略する。
 
@@ -503,13 +575,15 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 
 ### CRITICAL — 即時修正必須（マージブロック）
 
-| # | 観点 | ファイル:行 | 問題の要約 |
-|---|------|-----------|----------|
-| 1 | [観点カテゴリ] | `path/to/file.ts:42` | 一行の問題サマリ |
+| # | 観点 | ファイル:行 | 検証 | 問題の要約 |
+|---|------|-----------|------|----------|
+| 1 | [観点カテゴリ] | `path/to/file.ts:42` | CONFIRMED | 一行の問題サマリ |
 
 **1. [問題タイトル]**
 
 [問題の詳細説明。なぜ問題なのか、どのような影響があるか、コードの具体的な箇所を引用しながら説明する。]
+
+**再現:** [failure_scenario — どの入力・状態で何が壊れるか]
 
 → [推奨する修正方針を具体的に記述する。]
 
@@ -517,9 +591,9 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 
 ### HIGH — マージ前に修正推奨
 
-| # | 観点 | ファイル:行 | 問題の要約 |
-|---|------|-----------|----------|
-| 1 | [観点カテゴリ] | `path/to/file.ts:42` | 一行の問題サマリ |
+| # | 観点 | ファイル:行 | 検証 | 問題の要約 |
+|---|------|-----------|------|----------|
+| 1 | [観点カテゴリ] | `path/to/file.ts:42` | CONFIRMED | 一行の問題サマリ |
 
 **1. [問題タイトル]**
 
@@ -531,9 +605,9 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 
 ### MEDIUM — 次のPRで対応推奨
 
-| # | 観点 | ファイル:行 | 問題の要約 |
-|---|------|-----------|----------|
-| 1 | [観点カテゴリ] | `path/to/file.ts:42` | 一行の問題サマリ |
+| # | 観点 | ファイル:行 | 検証 | 問題の要約 |
+|---|------|-----------|------|----------|
+| 1 | [観点カテゴリ] | `path/to/file.ts:42` | CONFIRMED | 一行の問題サマリ |
 
 **1. [問題タイトル]**
 
@@ -545,9 +619,9 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 
 ### LOW — 観察・改善提案
 
-| # | 観点 | ファイル:行 | 問題の要約 |
-|---|------|-----------|----------|
-| 1 | [観点カテゴリ] | `path/to/file.ts:42` | 一行の問題サマリ |
+| # | 観点 | ファイル:行 | 検証 | 問題の要約 |
+|---|------|-----------|------|----------|
+| 1 | [観点カテゴリ] | `path/to/file.ts:42` | CONFIRMED | 一行の問題サマリ |
 
 **1. [問題タイトル]**
 
@@ -568,8 +642,9 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 
 **フォーマットのルール:**
 - 各セクションの冒頭に「表（一覧）」を置き、全問題を一目で把握できるようにする
+- 表の「検証」列には Step 5c の verdict（CONFIRMED / PLAUSIBLE / UNVERIFIED）を書く。REFUTED は表に載せない
 - 表の直後に各問題の「詳細説明」を番号付きで展開する
-- 詳細説明では問題のWHY（なぜ問題か）・影響範囲・コード引用を含める
+- 詳細説明では問題のWHY（なぜ問題か）・影響範囲・コード引用を含め、**再現:** 行に failure_scenario を書く
 - 修正方針は `→` で始める
 - エージェント名はレポートに含めない（読者に不要な実装詳細）
 - 問題がないセクションは省略する
@@ -593,6 +668,50 @@ SKILL_FILES に1件以上ある場合、**スキルファイル1件につき1つ
 - [ ] migration/backfill/queue/job/cron変更は既存versionと互換か
 - [ ] rollback・feature flag・監視/アラートの計画はあるか
 - [ ] セキュリティレビューを受けたか
+```
+
+---
+
+## Step 8: `--fix` — CONFIRMED の指摘を working tree に適用する（指定時のみ）
+
+`--fix` が引数に含まれる場合のみ実行する。**レポート（Step 6）を出した後**に着手する
+（レビュー結果の提示と修正の適用を混ぜない）。
+
+### 適用の前提
+
+- 対象がローカルの working tree であること（ユースケース A の自己レビュー、または対象ブランチを
+  checkout 済み）。リモート PR を checkout していない場合は適用せず、
+  「--fix はローカル working tree のみ対象」と伝えて終了する
+- `git status` を確認し、レビュー対象外の未コミット変更が混在している場合はユーザーに
+  一言確認してから進める（レビュー起因の修正と無関係の作業を混ぜない）
+
+### 適用ルール
+
+1. **CONFIRMED のみ適用する。** PLAUSIBLE / UNVERIFIED は適用しない（実在が確認できていない
+   指摘の「修正」は改悪リスクがある）
+2. CRITICAL → HIGH → MEDIUM → LOW の順に、指摘の「推奨修正方針」に沿って最小差分で修正する
+3. 修正のスコープは Finding の該当箇所に限定する。ついでのリファクタ・無関係な改善を混ぜない
+4. 全件適用後、リポジトリの軽量 check（lint / typecheck / 対象範囲の test。package.json /
+   justfile / Makefile から検出）を 1 回実行し、fail したら該当修正を revert して skipped 扱いにする
+5. **コミットはしない。** working tree に変更を置いた状態でユーザーに引き渡す
+
+### 適用結果の報告
+
+各 Finding に outcome を付けて再掲する:
+
+| outcome | 意味 |
+|---|---|
+| fixed | 修正を適用した |
+| skipped | 適用しなかった（理由を 1 行添える: check fail / 仕様判断が必要 / 影響範囲が広く別PR推奨 等） |
+| no_change_needed | 着手時点で既に解消していた |
+
+```markdown
+### Fix 適用結果
+
+| # | ファイル:行 | outcome | 備考 |
+|---|-----------|---------|------|
+| 1 | `path/to/file.ts:42` | fixed | |
+| 2 | `path/to/file.ts:88` | skipped | 仕様判断が必要なため Open Questions 参照 |
 ```
 
 ---
